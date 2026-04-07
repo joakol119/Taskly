@@ -1,15 +1,17 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { api } from '../../../lib/api';
 import TaskModal from '../../../components/TaskModal';
+import MembersPanel from '../../../components/MembersPanel';
 
 const s = {
   page: { minHeight: '100vh', background: '#0f172a', display: 'flex', flexDirection: 'column' },
   header: { padding: '14px 24px', display: 'flex', alignItems: 'center', gap: 16, background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.08)' },
   backBtn: { background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 13 },
-  boardTitle: { margin: 0, color: '#fff', fontSize: 18, fontWeight: 700 },
+  boardTitle: { margin: 0, color: '#fff', fontSize: 18, fontWeight: 700, flex: 1 },
+  membersBtn: { background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 13 },
   board: { flex: 1, display: 'flex', alignItems: 'flex-start', gap: 16, padding: 24, overflowX: 'auto' },
   column: { background: '#1e293b', borderRadius: 12, width: 280, minWidth: 280, display: 'flex', flexDirection: 'column', maxHeight: 'calc(100vh - 120px)' },
   columnHeader: { padding: '14px 16px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
@@ -34,12 +36,20 @@ export default function BoardPage() {
   const [newColName, setNewColName] = useState('');
   const [newTaskInputs, setNewTaskInputs] = useState({});
   const [selectedTask, setSelectedTask] = useState(null);
+  const [showMembers, setShowMembers] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(null);
   const router = useRouter();
   const params = useParams();
+
+  const fetchBoard = useCallback(() => {
+    api.getBoard(params.id).then(setBoard).catch(console.error);
+  }, [params.id]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) { router.push('/'); return; }
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    setCurrentUserId(user.id);
     api.getBoard(params.id).then(setBoard).catch(console.error).finally(() => setLoading(false));
   }, [params.id]);
 
@@ -125,6 +135,9 @@ export default function BoardPage() {
       <header style={s.header}>
         <button style={s.backBtn} onClick={() => router.push('/boards')}>← Tableros</button>
         <h1 style={s.boardTitle}>{board.name}</h1>
+        <button style={s.membersBtn} onClick={() => setShowMembers(true)}>
+          👥 Miembros ({1 + board.members.length})
+        </button>
       </header>
 
       <DragDropContext onDragEnd={onDragEnd}>
@@ -201,6 +214,15 @@ export default function BoardPage() {
           onClose={() => setSelectedTask(null)}
           onUpdated={handleTaskUpdated}
           onDeleted={handleTaskDeleted}
+        />
+      )}
+
+      {showMembers && (
+        <MembersPanel
+          board={board}
+          currentUserId={currentUserId}
+          onClose={() => setShowMembers(false)}
+          onMembersUpdated={fetchBoard}
         />
       )}
     </div>

@@ -21,21 +21,16 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  // Auth
   register: (data) => request('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
   login: (data) => request('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
-
-  // Boards
   getBoards: () => request('/boards'),
   createBoard: (data) => request('/boards', { method: 'POST', body: JSON.stringify(data) }),
   getBoard: (id) => request(`/boards/${id}`),
   deleteBoard: (id) => request(`/boards/${id}`, { method: 'DELETE' }),
-
-  // Columns
+  inviteMember: (boardId, email) => request(`/boards/${boardId}/members`, { method: 'POST', body: JSON.stringify({ email }) }),
+  removeMember: (boardId, userId) => request(`/boards/${boardId}/members/${userId}`, { method: 'DELETE' }),
   createColumn: (data) => request('/columns', { method: 'POST', body: JSON.stringify(data) }),
   deleteColumn: (id) => request(`/columns/${id}`, { method: 'DELETE' }),
-
-  // Tasks
   createTask: (data) => request('/tasks', { method: 'POST', body: JSON.stringify(data) }),
   updateTask: (id, data) => request(`/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   moveTask: (id, data) => request(`/tasks/${id}/move`, { method: 'PATCH', body: JSON.stringify(data) }),
