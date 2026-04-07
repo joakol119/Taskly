@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: taskly-db
+    environment:
+      POSTGRES_USER: taskly
+      POSTGRES_PASSWORD: taskly123
+      POSTGRES_DB: taskly
+    ports:
+      - '5432:5432'
+    volumes:
+      - taskly-db:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    container_name: taskly-backend
+    ports:
+      - '4000:4000'
+    environment:
+      - PORT=4000
+      - DATABASE_URL=postgresql://taskly:taskly123@db:5432/taskly
+      - JWT_SECRET=supersecretkey123
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        - NEXT_PUBLIC_API_URL=http://localhost:4000
+    container_name: taskly-frontend
+    ports:
+      - '3000:3000'
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:4000
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  taskly-db:
