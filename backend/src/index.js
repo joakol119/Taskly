@@ -9,8 +9,7 @@ const taskRoutes = require('./routes/tasks');
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
-app.use(express.json());
+app.use(cors({ origin: ['http://localhost:3000', 'https://taskly-seven-wheat.vercel.app'], credentials: true }));app.use(express.json());
 
 db.init().then(() => {
   app.use('/auth', authRoutes);
