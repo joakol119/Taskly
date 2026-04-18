@@ -49,6 +49,7 @@ async function init() {
       column_id INTEGER REFERENCES columns(id) ON DELETE CASCADE
     )
   `);
+  await query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS labels TEXT DEFAULT '[]'`);
   console.log('Database initialized');
 }
 
