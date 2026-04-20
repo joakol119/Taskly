@@ -5,6 +5,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { api } from '../../../lib/api';
 import { useTheme, themes } from '../../../lib/theme';
 import TaskModal from '../../../components/TaskModal';
+import { useToast } from '../../../components/Toast';
 import MembersPanel from '../../../components/MembersPanel';
 
 export default function BoardPage() {
@@ -22,6 +23,7 @@ export default function BoardPage() {
   const router = useRouter();
   const params = useParams();
   const { dark, toggle } = useTheme();
+  const toast = useToast();
   const t = dark ? themes.dark : themes.light;
 
   const fetchBoard = useCallback(() => {
@@ -47,7 +49,7 @@ export default function BoardPage() {
   };
 
   const handleDeleteColumn = async (colId) => {
-    if (!confirm('¿Eliminar esta columna y todas sus tareas?')) return;
+    
     try {
       await api.deleteColumn(colId);
       setBoard({ ...board, columns: board.columns.filter((c) => c.id !== colId) });

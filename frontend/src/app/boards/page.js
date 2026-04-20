@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '../../lib/api';
 import { useTheme, themes } from '../../lib/theme';
+import { useToast } from '../../components/Toast';
 
 const BOARD_COLORS = [
   'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -37,19 +38,21 @@ export default function BoardsPage() {
   const [editingName, setEditingName] = useState('');
   const [menuOpenId, setMenuOpenId] = useState(null);
   const [colorPickerId, setColorPickerId] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
   const clickTimers = useRef({});
   const router = useRouter();
   const { dark, toggle } = useTheme();
   const t = dark ? themes.dark : themes.light;
+  const toast = useToast();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) { router.push("/login"); return; }
+    if (!token) { router.push('/login'); return; }
     const u = localStorage.getItem('user');
     if (u) setUser(JSON.parse(u));
     api.getBoards()
       .then(fetched => setBoards(fetched))
-      .catch(console.error)
+      .catch(() => toast({ message: 'Error al cargar los tableros', type: 'error' }))
       .finally(() => setLoading(false));
   }, []);
 
@@ -66,18 +69,20 @@ export default function BoardsPage() {
       const board = await api.createBoard({ name: newName.trim() });
       setBoards(prev => [...prev, board]);
       setNewName('');
-    } catch (err) { console.error(err); }
+      toast({ message: `Tablero "${board.name}" creado` });
+    } catch (err) {
+      toast({ message: err.message || 'Error al crear el tablero', type: 'error' });
+    }
   };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    router.push("/login");
+    router.push('/login');
   };
 
   const getInitial = (name) => name ? name[0].toUpperCase() : '?';
 
-  // Drag & drop — guarda en DB al soltar
   const handleDragStart = (i) => setDragIndex(i);
   const handleDragOver = (e, i) => { e.preventDefault(); setOverIndex(i); };
   const handleDrop = async (i) => {
@@ -85,13 +90,13 @@ export default function BoardsPage() {
     const reordered = Array.from(boards);
     const [moved] = reordered.splice(dragIndex, 1);
     reordered.splice(i, 0, moved);
-    setBoards(reordered); // actualización optimista
+    setBoards(reordered);
     setDragIndex(null);
     setOverIndex(null);
     try {
       await api.reorderBoards(reordered.map(b => b.id));
-    } catch (err) {
-      console.error('Error al guardar orden:', err);
+    } catch {
+      toast({ message: 'Error al guardar el orden', type: 'error' });
     }
   };
   const handleDragEnd = () => { setDragIndex(null); setOverIndex(null); };
@@ -106,7 +111,7 @@ export default function BoardsPage() {
     } else {
       clickTimers.current[board.id] = setTimeout(() => {
         clickTimers.current[board.id] = null;
-        router.push("/login");
+        router.push(`/boards/${board.id}`);
       }, 250);
     }
   };
@@ -116,18 +121,22 @@ export default function BoardsPage() {
     try {
       await api.renameBoard(boardId, editingName.trim());
       setBoards(boards.map(b => b.id === boardId ? { ...b, name: editingName.trim() } : b));
-    } catch (err) { console.error(err); }
+      toast({ message: 'Tablero renombrado' });
+    } catch (err) {
+      toast({ message: err.message || 'Error al renombrar', type: 'error' });
+    }
     setEditingId(null);
   };
 
-  const handleDelete = async (e, boardId) => {
-    e.stopPropagation();
-    setMenuOpenId(null);
-    if (!confirm('¿Eliminar este tablero y todas sus columnas y tareas?')) return;
+  const handleDelete = async (boardId) => {
+    setConfirmDelete(null);
     try {
       await api.deleteBoard(boardId);
       setBoards(boards.filter(b => b.id !== boardId));
-    } catch (err) { console.error(err); }
+      toast({ message: 'Tablero eliminado', type: 'warning' });
+    } catch (err) {
+      toast({ message: err.message || 'Error al eliminar', type: 'error' });
+    }
   };
 
   const handleDuplicate = async (e, board) => {
@@ -136,7 +145,10 @@ export default function BoardsPage() {
     try {
       const newBoard = await api.duplicateBoard(board.id);
       setBoards(prev => [...prev, newBoard]);
-    } catch (err) { console.error(err); }
+      toast({ message: `"${board.name}" duplicado` });
+    } catch (err) {
+      toast({ message: err.message || 'Error al duplicar', type: 'error' });
+    }
   };
 
   const handleRename = (e, board) => {
@@ -146,21 +158,20 @@ export default function BoardsPage() {
     setEditingName(board.name);
   };
 
-  // Cambio de color — guarda en DB
   const handleColorChange = async (e, boardId, color) => {
     e.stopPropagation();
-    setBoards(boards.map(b => b.id === boardId ? { ...b, color } : b)); // optimista
+    setBoards(boards.map(b => b.id === boardId ? { ...b, color } : b));
     setColorPickerId(null);
     setMenuOpenId(null);
     try {
       await api.updateBoardColor(boardId, color);
-    } catch (err) {
-      console.error('Error al guardar color:', err);
+      toast({ message: 'Color actualizado' });
+    } catch {
+      toast({ message: 'Error al guardar el color', type: 'error' });
     }
   };
 
-  // Color: usa el guardado en DB, o fallback por índice
-  const getBoardColor = (board, i) => board.color || BOARD_COLORS[i % BOARD_COLORS.length];
+  const getBoardColor = (board) => board.color || BOARD_COLORS[board.id % BOARD_COLORS.length];
 
   return (
     <div style={{ minHeight: '100vh', background: t.bg, fontFamily: "'Inter', system-ui, sans-serif", transition: 'background 0.3s' }}>
@@ -201,7 +212,28 @@ export default function BoardsPage() {
           <button style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 14, whiteSpace: 'nowrap' }} type="submit">➕ Crear tablero</button>
         </form>
 
-        {loading ? <p style={{ color: t.textMuted }}>Cargando...</p> : (
+        {loading ? (
+          /* Skeleton loader */
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
+            {[...Array(4)].map((_, i) => (
+              <div key={i} style={{ borderRadius: 16, minHeight: 140, background: dark ? '#1e293b' : '#e2e8f0', animation: 'pulse 1.5s ease-in-out infinite' }} />
+            ))}
+            <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }`}</style>
+          </div>
+        ) : boards.length === 0 ? (
+          /* Empty state */
+          <div style={{ textAlign: 'center', padding: '80px 24px' }}>
+            <div style={{ fontSize: 64, marginBottom: 16 }}>🗂️</div>
+            <h3 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 700, color: t.text }}>No tenés tableros todavía</h3>
+            <p style={{ color: t.textSub, fontSize: 15, margin: '0 0 24px' }}>Creá tu primer tablero para empezar a organizar tus proyectos</p>
+            <button
+              onClick={() => document.querySelector('input[placeholder="Nombre del nuevo tablero"]').focus()}
+              style={{ padding: '12px 28px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 15 }}
+            >
+              ➕ Crear mi primer tablero
+            </button>
+          </div>
+        ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
             {boards.map((board, i) => (
               <div
@@ -215,7 +247,7 @@ export default function BoardsPage() {
                 style={{
                   borderRadius: 16, padding: 24, position: 'relative',
                   cursor: editingId === board.id ? 'default' : 'pointer',
-                  background: getBoardColor(board, i),
+                  background: getBoardColor(board),
                   display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
                   minHeight: 140,
                   boxShadow: dragIndex === i ? '0 20px 40px rgba(0,0,0,0.3)' : '0 4px 15px rgba(0,0,0,0.1)',
@@ -224,61 +256,29 @@ export default function BoardsPage() {
                   transition: 'opacity 0.15s, outline 0.1s, box-shadow 0.2s',
                 }}
               >
-                {/* Botón menú ⋯ */}
                 <button
                   onClick={(e) => { e.stopPropagation(); e.nativeEvent.stopImmediatePropagation(); setMenuOpenId(menuOpenId === board.id ? null : board.id); setColorPickerId(null); }}
-                  style={{
-                    position: 'absolute', top: 12, right: 12,
-                    background: 'rgba(0,0,0,0.2)', border: 'none', borderRadius: 6,
-                    color: '#fff', cursor: 'pointer', fontSize: 16, padding: '2px 8px',
-                    lineHeight: 1.4, opacity: 0.8,
-                  }}
+                  style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(0,0,0,0.2)', border: 'none', borderRadius: 6, color: '#fff', cursor: 'pointer', fontSize: 16, padding: '2px 8px', lineHeight: 1.4, opacity: 0.8 }}
                 >⋯</button>
 
-                {/* Dropdown menú */}
                 {menuOpenId === board.id && (
-                  <div
-                    onClick={(e) => { e.stopPropagation(); e.nativeEvent.stopImmediatePropagation(); }}
-                    style={{
-                      position: 'absolute', top: 44, right: 12, zIndex: 200,
-                      background: '#1e293b', borderRadius: 10, overflow: 'hidden',
-                      boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 160,
-                      border: '1px solid rgba(255,255,255,0.08)',
-                    }}
-                  >
+                  <div onClick={(e) => { e.stopPropagation(); e.nativeEvent.stopImmediatePropagation(); }} style={{ position: 'absolute', top: 44, right: 12, zIndex: 200, background: '#1e293b', borderRadius: 10, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 160, border: '1px solid rgba(255,255,255,0.08)' }}>
                     {[
                       { icon: '✏️', label: 'Renombrar', action: (e) => handleRename(e, board) },
                       { icon: '📋', label: 'Duplicar', action: (e) => handleDuplicate(e, board) },
                       { icon: '🎨', label: 'Cambiar color', action: (e) => { e.stopPropagation(); e.nativeEvent.stopImmediatePropagation(); setColorPickerId(colorPickerId === board.id ? null : board.id); } },
-                      { icon: '🗑️', label: 'Eliminar', action: (e) => handleDelete(e, board.id), danger: true },
+                      { icon: '🗑️', label: 'Eliminar', action: (e) => { e.stopPropagation(); setMenuOpenId(null); setConfirmDelete(board); }, danger: true },
                     ].map(({ icon, label, action, danger }) => (
-                      <button key={label} onClick={action} style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        width: '100%', padding: '10px 14px', border: 'none',
-                        background: 'none', color: danger ? '#f87171' : '#f1f5f9',
-                        cursor: 'pointer', fontSize: 13, textAlign: 'left',
-                        borderBottom: label === 'Cambiar color' ? '1px solid rgba(255,255,255,0.06)' : 'none',
-                      }}
+                      <button key={label} onClick={action} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 14px', border: 'none', background: 'none', color: danger ? '#f87171' : '#f1f5f9', cursor: 'pointer', fontSize: 13, textAlign: 'left' }}
                         onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                      >
-                        <span>{icon}</span> {label}
-                      </button>
+                      ><span>{icon}</span> {label}</button>
                     ))}
-
                     {colorPickerId === board.id && (
                       <div style={{ padding: '10px 12px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                         {COLOR_OPTIONS.map(({ label, value }) => (
-                          <button
-                            key={value}
-                            title={label}
-                            onClick={(e) => { e.nativeEvent.stopImmediatePropagation(); handleColorChange(e, board.id, value); }}
-                            style={{
-                              width: 28, height: 28, borderRadius: 6,
-                              border: getBoardColor(board, i) === value ? '2px solid white' : '2px solid transparent',
-                              background: value, cursor: 'pointer', padding: 0,
-                            }}
-                          />
+                          <button key={value} title={label} onClick={(e) => { e.nativeEvent.stopImmediatePropagation(); handleColorChange(e, board.id, value); }}
+                            style={{ width: 28, height: 28, borderRadius: 6, border: getBoardColor(board) === value ? '2px solid white' : '2px solid transparent', background: value, cursor: 'pointer', padding: 0 }} />
                         ))}
                       </div>
                     )}
@@ -287,15 +287,11 @@ export default function BoardsPage() {
 
                 <div>
                   {editingId === board.id ? (
-                    <input
-                      autoFocus
-                      value={editingName}
-                      onChange={(e) => setEditingName(e.target.value)}
+                    <input autoFocus value={editingName} onChange={(e) => setEditingName(e.target.value)}
                       onBlur={() => saveEdit(board.id)}
                       onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(board.id); if (e.key === 'Escape') setEditingId(null); }}
                       onClick={(e) => { e.stopPropagation(); e.nativeEvent.stopImmediatePropagation(); }}
-                      style={{ fontSize: 18, fontWeight: 800, color: '#fff', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.5)', borderRadius: 6, padding: '2px 8px', outline: 'none', width: '100%', boxSizing: 'border-box' }}
-                    />
+                      style={{ fontSize: 18, fontWeight: 800, color: '#fff', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.5)', borderRadius: 6, padding: '2px 8px', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
                   ) : (
                     <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px', paddingRight: 32 }}>{board.name}</p>
                   )}
@@ -303,9 +299,7 @@ export default function BoardsPage() {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 20 }}>
-                  <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>
-                    {editingId === board.id ? 'Enter · Esc' : 'Ver tablero'}
-                  </span>
+                  <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>{editingId === board.id ? 'Enter · Esc' : 'Ver tablero'}</span>
                   {editingId !== board.id && <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 20 }}>→</span>}
                 </div>
               </div>
@@ -313,6 +307,20 @@ export default function BoardsPage() {
           </div>
         )}
       </main>
+
+      {/* Modal de confirmación de borrado */}
+      {confirmDelete && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#1e293b', borderRadius: 16, padding: 28, maxWidth: 380, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+            <p style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: '#f1f5f9' }}>¿Eliminar tablero?</p>
+            <p style={{ margin: '0 0 24px', fontSize: 14, color: '#94a3b8' }}>Se eliminarán todas las columnas y tareas de <strong style={{ color: '#f1f5f9' }}>"{confirmDelete.name}"</strong>. Esta acción no se puede deshacer.</p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button onClick={() => setConfirmDelete(null)} style={{ padding: '10px 20px', borderRadius: 8, border: '1.5px solid #334155', background: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Cancelar</button>
+              <button onClick={() => handleDelete(confirmDelete.id)} style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: '#ef4444', color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 700 }}>Eliminar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

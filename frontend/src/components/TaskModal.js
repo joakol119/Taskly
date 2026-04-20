@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../lib/api';
+import { useToast } from './Toast';
 
 const LABEL_COLORS = [
   { color: '#ef4444', name: 'Rojo' },
@@ -36,6 +37,7 @@ function formatForInput(dateStr) {
 }
 
 export default function TaskModal({ task, onClose, onUpdated, onDeleted }) {
+  const toast = useToast();
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || '');
   const [labels, setLabels] = useState(task.labels || []);
@@ -76,6 +78,7 @@ export default function TaskModal({ task, onClose, onUpdated, onDeleted }) {
         dueDate: dueDate || null,
       });
       onUpdated(updated);
+      toast({ message: 'Tarea actualizada' });
       onClose();
     } catch (err) {
       setError(err.message);
@@ -85,10 +88,11 @@ export default function TaskModal({ task, onClose, onUpdated, onDeleted }) {
   };
 
   const handleDelete = async () => {
-    if (!confirm('¿Eliminar esta tarea?')) return;
+    
     try {
       await api.deleteTask(task.id);
       onDeleted(task.id);
+      toast({ message: 'Tarea eliminada', type: 'warning' });
       onClose();
     } catch (err) { setError(err.message); }
   };
