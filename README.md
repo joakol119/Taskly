@@ -8,7 +8,10 @@ A full-stack Kanban board application built for portfolio purposes. Manage proje
 
 ## Screenshot
 
-> _Add a screenshot of the app here_
+![Landing](docs/landing.png)
+![Features](docs/features.png)
+![Login](docs/login.png)
+![Boards](docs/boards.png)
 
 ---
 
@@ -142,7 +145,7 @@ taskly/
 
 **Joaquín Poblete**
 - GitHub: [@joakol119](https://github.com/joakol119)
-- LinkedIn: [linkedin.com/in/tu-perfil](https://linkedin.com/in/)
+- LinkedIn: [Joaquín Poblete](https://www.linkedin.com/in/joaquin-poblete-esteves-315780234/)
 
 ---
 
