@@ -29,7 +29,7 @@ export default function LandingPage() {
         .hero-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.3); color: #a5b4fc; borderRadius: 999px; padding: 6px 16px; fontSize: 13px; fontWeight: 500; marginBottom: 32px; opacity: 0; transform: translateY(16px); transition: all 0.6s 0.1s; }
         .hero-badge.visible { opacity: 1; transform: translateY(0); }
 
-        .hero h1 { font-family: 'Syne', sans-serif; font-size: clamp(48px, 8vw, 88px); font-weight: 800; line-height: 1.02; letter-spacing: -2px; opacity: 0; transform: translateY(24px); transition: all 0.7s 0.2s; }
+        .hero h1 { font-family: 'Syne', sans-serif; font-size: clamp(40px, 6vw, 72px); font-weight: 800; line-height: 1.08; letter-spacing: -1px; opacity: 0; transform: translateY(24px); transition: all 0.7s 0.2s; }
         .hero h1.visible { opacity: 1; transform: translateY(0); }
 
         .gradient-text { background: linear-gradient(135deg, #6366f1, #a78bfa, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
