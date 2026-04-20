@@ -28,6 +28,13 @@ const s = {
   error: { color: '#ef4444', fontSize: 13, marginBottom: 12 },
 };
 
+function formatForInput(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d)) return '';
+  return d.toISOString().slice(0, 16); // "YYYY-MM-DDTHH:MM"
+}
+
 export default function TaskModal({ task, onClose, onUpdated, onDeleted }) {
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || '');
@@ -35,6 +42,7 @@ export default function TaskModal({ task, onClose, onUpdated, onDeleted }) {
   const [labelText, setLabelText] = useState('');
   const [selectedColor, setSelectedColor] = useState(LABEL_COLORS[0].color);
   const selectedColorRef = useRef(LABEL_COLORS[0].color);
+  const [dueDate, setDueDate] = useState(formatForInput(task.dueDate));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -61,7 +69,12 @@ export default function TaskModal({ task, onClose, onUpdated, onDeleted }) {
     if (!title.trim()) { setError('El título es obligatorio'); return; }
     setLoading(true);
     try {
-      const updated = await api.updateTask(task.id, { title: title.trim(), description: description.trim(), labels });
+      const updated = await api.updateTask(task.id, {
+        title: title.trim(),
+        description: description.trim(),
+        labels,
+        dueDate: dueDate || null,
+      });
       onUpdated(updated);
       onClose();
     } catch (err) {
@@ -80,6 +93,20 @@ export default function TaskModal({ task, onClose, onUpdated, onDeleted }) {
     } catch (err) { setError(err.message); }
   };
 
+  // Calcula si la fecha está vencida o próxima
+  const getDueDateStatus = () => {
+    if (!dueDate) return null;
+    const now = new Date();
+    const due = new Date(dueDate);
+    const diffDays = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) return { text: 'Vencida', color: '#ef4444', bg: '#ef444420' };
+    if (diffDays === 0) return { text: 'Hoy', color: '#f97316', bg: '#f9731620' };
+    if (diffDays <= 2) return { text: `En ${diffDays} día${diffDays > 1 ? 's' : ''}`, color: '#eab308', bg: '#eab30820' };
+    return { text: `En ${diffDays} días`, color: '#22c55e', bg: '#22c55e20' };
+  };
+
+  const dueDateStatus = getDueDateStatus();
+
   return (
     <div style={s.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div style={s.modal}>
@@ -93,6 +120,33 @@ export default function TaskModal({ task, onClose, onUpdated, onDeleted }) {
 
         <label style={s.label}>Descripción</label>
         <textarea style={s.textarea} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Agregá una descripción..." />
+
+        <label style={s.label}>Fecha de vencimiento</label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <input
+            type="datetime-local"
+            style={{ ...s.input, marginBottom: 0, flex: 1, colorScheme: 'dark' }}
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+          />
+          {dueDate && (
+            <button
+              onClick={() => setDueDate('')}
+              style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 18, padding: 0 }}
+            >✕</button>
+          )}
+        </div>
+
+        {dueDateStatus && (
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            background: dueDateStatus.bg, border: `1px solid ${dueDateStatus.color}`,
+            color: dueDateStatus.color, borderRadius: 8, padding: '4px 12px',
+            fontSize: 12, fontWeight: 600, marginBottom: 16,
+          }}>
+            📅 {dueDateStatus.text}
+          </div>
+        )}
 
         <label style={s.label}>Etiquetas</label>
 

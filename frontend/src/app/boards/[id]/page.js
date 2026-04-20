@@ -30,7 +30,7 @@ export default function BoardPage() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) { router.push('/'); return; }
+    if (!token) { router.push('/login'); return; }
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     setCurrentUserId(user.id);
     api.getBoard(params.id).then(setBoard).catch(console.error).finally(() => setLoading(false));

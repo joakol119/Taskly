@@ -7,6 +7,7 @@ const mapTask = (t) => ({
   id: t.id, title: t.title, description: t.description,
   order: t.order, columnId: t.column_id,
   labels: t.labels ? JSON.parse(t.labels) : [],
+  dueDate: t.due_date || null,
 });
 
 router.post('/', auth, async (req, res) => {
@@ -24,11 +25,11 @@ router.post('/', auth, async (req, res) => {
 });
 
 router.patch('/:id', auth, async (req, res) => {
-  const { title, description, labels } = req.body;
+  const { title, description, labels, dueDate } = req.body;
   try {
     const result = await db.query(
-      'UPDATE tasks SET title = $1, description = $2, labels = $3 WHERE id = $4 RETURNING *',
-      [title, description || null, JSON.stringify(labels || []), req.params.id]
+      'UPDATE tasks SET title = $1, description = $2, labels = $3, due_date = $4 WHERE id = $5 RETURNING *',
+      [title, description || null, JSON.stringify(labels || []), dueDate || null, req.params.id]
     );
     res.json(mapTask(result.rows[0]));
   } catch (err) { res.status(500).json({ error: err.message }); }

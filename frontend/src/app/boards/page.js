@@ -44,7 +44,7 @@ export default function BoardsPage() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) { router.push('/'); return; }
+    if (!token) { router.push("/login"); return; }
     const u = localStorage.getItem('user');
     if (u) setUser(JSON.parse(u));
     api.getBoards()
@@ -72,7 +72,7 @@ export default function BoardsPage() {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    router.push('/');
+    router.push("/login");
   };
 
   const getInitial = (name) => name ? name[0].toUpperCase() : '?';
@@ -106,7 +106,7 @@ export default function BoardsPage() {
     } else {
       clickTimers.current[board.id] = setTimeout(() => {
         clickTimers.current[board.id] = null;
-        router.push(`/boards/${board.id}`);
+        router.push("/login");
       }, 250);
     }
   };
@@ -160,7 +160,7 @@ export default function BoardsPage() {
   };
 
   // Color: usa el guardado en DB, o fallback por índice
-  const getBoardColor = (board) => board.color || BOARD_COLORS[board.id % BOARD_COLORS.length];
+  const getBoardColor = (board, i) => board.color || BOARD_COLORS[i % BOARD_COLORS.length];
 
   return (
     <div style={{ minHeight: '100vh', background: t.bg, fontFamily: "'Inter', system-ui, sans-serif", transition: 'background 0.3s' }}>
@@ -215,7 +215,7 @@ export default function BoardsPage() {
                 style={{
                   borderRadius: 16, padding: 24, position: 'relative',
                   cursor: editingId === board.id ? 'default' : 'pointer',
-                  background: getBoardColor(board),
+                  background: getBoardColor(board, i),
                   display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
                   minHeight: 140,
                   boxShadow: dragIndex === i ? '0 20px 40px rgba(0,0,0,0.3)' : '0 4px 15px rgba(0,0,0,0.1)',
@@ -275,7 +275,7 @@ export default function BoardsPage() {
                             onClick={(e) => { e.nativeEvent.stopImmediatePropagation(); handleColorChange(e, board.id, value); }}
                             style={{
                               width: 28, height: 28, borderRadius: 6,
-                              border: getBoardColor(board) === value ? '2px solid white' : '2px solid transparent',
+                              border: getBoardColor(board, i) === value ? '2px solid white' : '2px solid transparent',
                               background: value, cursor: 'pointer', padding: 0,
                             }}
                           />
