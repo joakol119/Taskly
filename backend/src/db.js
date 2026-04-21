@@ -22,6 +22,8 @@ async function init() {
       id SERIAL PRIMARY KEY,
       name TEXT NOT NULL,
       owner_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      position INTEGER DEFAULT 0,
+      color TEXT,
       created_at TIMESTAMP DEFAULT NOW()
     )
   `);
@@ -50,6 +52,9 @@ async function init() {
     )
   `);
   await query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS labels TEXT DEFAULT '[]'`);
+  await query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS due_date TIMESTAMP`);
+  await query(`ALTER TABLE boards ADD COLUMN IF NOT EXISTS position INTEGER DEFAULT 0`);
+  await query(`ALTER TABLE boards ADD COLUMN IF NOT EXISTS color TEXT`);
   console.log('Database initialized');
 }
 
