@@ -2,7 +2,8 @@
 
 A full-stack Kanban board application built for portfolio purposes. Manage projects visually with boards, columns, and draggable task cards.
 
-**[Live Demo](#)** · **[Report Bug](https://github.com/joakol119/Taskly/issues)**
+**[Live Demo](https://taskly-seven-wheat.vercel.app)**
+
 
 ---
 
