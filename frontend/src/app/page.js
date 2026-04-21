@@ -204,7 +204,7 @@ export default function LandingPage() {
           <span>📋</span>
           <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 15 }}>Taskly</span>
         </div>
-        <p className="footer-text">Hecho con ♥ por Joaquín · 2026</p>
+        <p className="footer-text">Hecho por Joaquín · 2026</p>
         <p className="footer-text">Next.js · Node.js · PostgreSQL</p>
       </footer>
     </div>
