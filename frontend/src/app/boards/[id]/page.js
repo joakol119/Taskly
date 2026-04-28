@@ -72,13 +72,13 @@ export default function BoardPage() {
   };
 
   const handleTaskUpdated = (updatedTask) => {
-    setBoard({
-      ...board,
-      columns: board.columns.map((c) => ({
+    setBoard((prev) => ({
+      ...prev,
+      columns: prev.columns.map((c) => ({
         ...c,
         tasks: c.tasks.map((t) => (t.id === updatedTask.id ? updatedTask : t)),
       })),
-    });
+    }));
   };
 
   const handleTaskDeleted = (taskId) => {
