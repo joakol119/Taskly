@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body {
+    @apply bg-bg text-text;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  body {
+    @apply antialiased;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  *:focus-visible {
+    outline: 2px solid theme('colors.accent.DEFAULT');
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background-color: theme('colors.accent.soft');
+    color: theme('colors.text.DEFAULT');
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
