@@ -3,46 +3,70 @@ const router = express.Router();
 const db = require('../db');
 const auth = require('../middleware/auth');
 
-const mapTask = (t) => ({
-  id: t.id, title: t.title, description: t.description,
-  order: t.order, columnId: t.column_id,
-  labels: t.labels ? JSON.parse(t.labels) : [],
-  dueDate: t.due_date || null,
-});
+function serializeTask(t) {
+  return {
+    id: t.id,
+    title: t.title,
+    description: t.description,
+    order: t.order,
+    columnId: t.column_id,
+    done: t.done || false,
+    labels: t.labels ? (typeof t.labels === 'string' ? JSON.parse(t.labels) : t.labels) : [],
+    dueDate: t.due_date || null,
+  };
+}
 
 router.post('/', auth, async (req, res) => {
-  const { title, description, columnId } = req.body;
+  const { title, columnId } = req.body;
   if (!title || !columnId) return res.status(400).json({ error: 'title y columnId son obligatorios' });
   try {
-    const countRes = await db.query('SELECT COUNT(*) FROM tasks WHERE column_id = $1', [columnId]);
-    const order = parseInt(countRes.rows[0].count);
-    const result = await db.query(
-      'INSERT INTO tasks (title, description, column_id, "order", labels) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [title, description || null, columnId, order, '[]']
+    const posRes = await db.query(
+      'SELECT COALESCE(MAX("order"), -1) + 1 AS next_pos FROM tasks WHERE column_id = $1',
+      [columnId]
     );
-    res.status(201).json(mapTask(result.rows[0]));
+    const order = posRes.rows[0].next_pos;
+    const result = await db.query(
+      'INSERT INTO tasks (title, column_id, "order") VALUES ($1, $2, $3) RETURNING *',
+      [title, columnId, order]
+    );
+    res.status(201).json(serializeTask(result.rows[0]));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.patch('/:id', auth, async (req, res) => {
-  const { title, description, labels, dueDate } = req.body;
+  const { title, description, labels, dueDate, done } = req.body;
   try {
+    const fields = [];
+    const values = [];
+    let i = 1;
+    if (title !== undefined) { fields.push(`title = $${i++}`); values.push(title); }
+    if (description !== undefined) { fields.push(`description = $${i++}`); values.push(description); }
+    if (labels !== undefined) { fields.push(`labels = $${i++}`); values.push(JSON.stringify(labels)); }
+    if (dueDate !== undefined) { fields.push(`due_date = $${i++}`); values.push(dueDate); }
+    if (done !== undefined) { fields.push(`done = $${i++}`); values.push(done); }
+    if (!fields.length) return res.status(400).json({ error: 'Nada que actualizar' });
+    values.push(req.params.id);
     const result = await db.query(
-      'UPDATE tasks SET title = $1, description = $2, labels = $3, due_date = $4 WHERE id = $5 RETURNING *',
-      [title, description || null, JSON.stringify(labels || []), dueDate || null, req.params.id]
+      `UPDATE tasks SET ${fields.join(', ')} WHERE id = $${i} RETURNING *`,
+      values
     );
-    res.json(mapTask(result.rows[0]));
+    if (!result.rows.length) return res.status(404).json({ error: 'Tarea no encontrada' });
+    res.json(serializeTask(result.rows[0]));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.patch('/:id/move', auth, async (req, res) => {
   const { columnId, order } = req.body;
+  if (columnId === undefined || order === undefined) {
+    return res.status(400).json({ error: 'columnId y order son obligatorios' });
+  }
   try {
     const result = await db.query(
       'UPDATE tasks SET column_id = $1, "order" = $2 WHERE id = $3 RETURNING *',
       [columnId, order, req.params.id]
     );
-    res.json(mapTask(result.rows[0]));
+    if (!result.rows.length) return res.status(404).json({ error: 'Tarea no encontrada' });
+    res.json(serializeTask(result.rows[0]));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

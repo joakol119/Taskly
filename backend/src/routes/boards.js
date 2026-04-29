@@ -17,7 +17,14 @@ const BOARD_COLORS = [
 router.get('/', auth, async (req, res) => {
   try {
     const result = await db.query(`
-      SELECT b.*, u.name as owner_name, u.email as owner_email
+      SELECT
+        b.*,
+        u.name as owner_name,
+        u.email as owner_email,
+        (SELECT COUNT(*)::int FROM columns WHERE board_id = b.id) as column_count,
+        (SELECT COUNT(*)::int FROM tasks t JOIN columns c ON t.column_id = c.id WHERE c.board_id = b.id) as task_count,
+        (SELECT COUNT(*)::int FROM tasks t JOIN columns c ON t.column_id = c.id WHERE c.board_id = b.id AND t.done = true) as done_count,
+        (SELECT COUNT(*)::int FROM board_members WHERE board_id = b.id) as member_count
       FROM boards b
       JOIN users u ON u.id = b.owner_id
       WHERE b.owner_id = $1 OR EXISTS (
@@ -26,8 +33,15 @@ router.get('/', auth, async (req, res) => {
       ORDER BY b.position ASC, b.created_at DESC
     `, [req.user.id]);
     const boards = result.rows.map(b => ({
-      id: b.id, name: b.name, createdAt: b.created_at,
-      position: b.position, color: b.color,
+      id: b.id,
+      name: b.name,
+      createdAt: b.created_at,
+      position: b.position,
+      color: b.color,
+      columnCount: b.column_count,
+      taskCount: b.task_count,
+      doneCount: b.done_count,
+      memberCount: b.member_count,
       owner: { id: b.owner_id, name: b.owner_name, email: b.owner_email }
     }));
     res.json(boards);
@@ -52,6 +66,7 @@ router.post('/', auth, async (req, res) => {
     res.status(201).json({
       id: b.id, name: b.name, createdAt: b.created_at,
       position: b.position, color: b.color,
+      columnCount: 0, taskCount: 0, doneCount: 0, memberCount: 0,
       owner: { id: req.user.id, name: req.user.name, email: req.user.email }
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -81,10 +96,10 @@ router.get('/:id', auth, async (req, res) => {
     if (!boardRes.rows.length) return res.status(404).json({ error: 'Tablero no encontrado' });
     const b = boardRes.rows[0];
 
-    const isMember = b.owner_id === req.user.id;
-    if (!isMember) {
+    const isOwner = b.owner_id === req.user.id;
+    if (!isOwner) {
       const memberCheck = await db.query('SELECT 1 FROM board_members WHERE board_id = $1 AND user_id = $2', [b.id, req.user.id]);
-      if (!memberCheck.rows.length) return res.status(403).json({ error: 'No tenés acceso a este tablero' });
+      if (!memberCheck.rows.length) return res.status(403).json({ error: 'No tenes acceso a este tablero' });
     }
 
     const membersRes = await db.query(`
@@ -100,7 +115,9 @@ router.get('/:id', auth, async (req, res) => {
         tasks: tasksRes.rows.map(t => ({
           id: t.id, title: t.title, description: t.description,
           order: t.order, columnId: t.column_id,
-          labels: t.labels ? JSON.parse(t.labels) : []
+          done: t.done || false,
+          labels: t.labels ? (typeof t.labels === 'string' ? JSON.parse(t.labels) : t.labels) : [],
+          dueDate: t.due_date || null,
         }))
       };
     }));
@@ -120,7 +137,7 @@ router.patch('/:id', auth, async (req, res) => {
   try {
     const boardRes = await db.query('SELECT * FROM boards WHERE id = $1', [req.params.id]);
     if (!boardRes.rows.length) return res.status(404).json({ error: 'Tablero no encontrado' });
-    if (boardRes.rows[0].owner_id !== req.user.id) return res.status(403).json({ error: 'Solo el dueño puede editar el tablero' });
+    if (boardRes.rows[0].owner_id !== req.user.id) return res.status(403).json({ error: 'Solo el dueno puede editar el tablero' });
 
     let result;
     if (name && color !== undefined) {
@@ -140,12 +157,12 @@ router.post('/:id/members', auth, async (req, res) => {
   try {
     const boardRes = await db.query('SELECT * FROM boards WHERE id = $1', [req.params.id]);
     if (!boardRes.rows.length) return res.status(404).json({ error: 'Tablero no encontrado' });
-    if (boardRes.rows[0].owner_id !== req.user.id) return res.status(403).json({ error: 'Solo el dueño puede invitar' });
+    if (boardRes.rows[0].owner_id !== req.user.id) return res.status(403).json({ error: 'Solo el dueno puede invitar' });
 
     const userRes = await db.query('SELECT id, name, email FROM users WHERE email = $1', [email]);
     if (!userRes.rows.length) return res.status(404).json({ error: 'No existe un usuario con ese email' });
     const invitee = userRes.rows[0];
-    if (invitee.id === req.user.id) return res.status(400).json({ error: 'No podés invitarte a vos mismo' });
+    if (invitee.id === req.user.id) return res.status(400).json({ error: 'No podes invitarte a vos mismo' });
 
     const existing = await db.query('SELECT 1 FROM board_members WHERE user_id = $1 AND board_id = $2', [invitee.id, req.params.id]);
     if (existing.rows.length) return res.status(400).json({ error: 'El usuario ya es miembro' });
@@ -159,7 +176,7 @@ router.delete('/:id/members/:userId', auth, async (req, res) => {
   try {
     const boardRes = await db.query('SELECT * FROM boards WHERE id = $1', [req.params.id]);
     if (!boardRes.rows.length) return res.status(404).json({ error: 'Tablero no encontrado' });
-    if (boardRes.rows[0].owner_id !== req.user.id) return res.status(403).json({ error: 'Solo el dueño puede eliminar miembros' });
+    if (boardRes.rows[0].owner_id !== req.user.id) return res.status(403).json({ error: 'Solo el dueno puede eliminar miembros' });
     await db.query('DELETE FROM board_members WHERE user_id = $1 AND board_id = $2', [req.params.userId, req.params.id]);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -169,7 +186,7 @@ router.delete('/:id', auth, async (req, res) => {
   try {
     const boardRes = await db.query('SELECT * FROM boards WHERE id = $1', [req.params.id]);
     if (!boardRes.rows.length) return res.status(404).json({ error: 'Tablero no encontrado' });
-    if (boardRes.rows[0].owner_id !== req.user.id) return res.status(403).json({ error: 'Solo el dueño puede eliminar el tablero' });
+    if (boardRes.rows[0].owner_id !== req.user.id) return res.status(403).json({ error: 'Solo el dueno puede eliminar el tablero' });
     await db.query('DELETE FROM boards WHERE id = $1', [req.params.id]);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -190,7 +207,7 @@ router.post('/:id/duplicate', auth, async (req, res) => {
 
     const newBoard = await db.query(
       'INSERT INTO boards (name, owner_id, position, color) VALUES ($1, $2, $3, $4) RETURNING *',
-      [orig.name + ' (copia)', req.user.id, position, color]
+      [orig.name + ' (copy)', req.user.id, position, color]
     );
     const nb = newBoard.rows[0];
     const colsRes = await db.query('SELECT * FROM columns WHERE board_id = $1 ORDER BY "order"', [orig.id]);
@@ -210,6 +227,7 @@ router.post('/:id/duplicate', auth, async (req, res) => {
     res.status(201).json({
       id: nb.id, name: nb.name, createdAt: nb.created_at,
       position: nb.position, color: nb.color,
+      columnCount: colsRes.rows.length, taskCount: 0, doneCount: 0, memberCount: 0,
       owner: { id: req.user.id, name: req.user.name, email: req.user.email }
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
