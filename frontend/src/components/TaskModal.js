@@ -1,39 +1,25 @@
 'use client';
+
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../lib/api';
 import { useToast } from './Toast';
 
 const LABEL_COLORS = [
-  { color: '#ef4444', name: 'Rojo' },
-  { color: '#f97316', name: 'Naranja' },
-  { color: '#eab308', name: 'Amarillo' },
-  { color: '#22c55e', name: 'Verde' },
-  { color: '#3b82f6', name: 'Azul' },
-  { color: '#8b5cf6', name: 'Violeta' },
-  { color: '#ec4899', name: 'Rosa' },
-  { color: '#64748b', name: 'Gris' },
+  { color: '#ef4444', name: 'Red' },
+  { color: '#f97316', name: 'Orange' },
+  { color: '#eab308', name: 'Yellow' },
+  { color: '#22c55e', name: 'Green' },
+  { color: '#3b82f6', name: 'Blue' },
+  { color: '#8b5cf6', name: 'Violet' },
+  { color: '#ec4899', name: 'Pink' },
+  { color: '#64748b', name: 'Gray' },
 ];
-
-const s = {
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal: { background: '#1e293b', borderRadius: 16, padding: 28, width: '100%', maxWidth: 480, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  title: { margin: 0, color: '#f1f5f9', fontSize: 16, fontWeight: 700 },
-  closeBtn: { background: 'none', border: 'none', color: '#64748b', fontSize: 20, cursor: 'pointer', lineHeight: 1 },
-  label: { display: 'block', color: '#94a3b8', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
-  input: { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1.5px solid #334155', background: '#0f172a', color: '#f1f5f9', fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 16 },
-  textarea: { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1.5px solid #334155', background: '#0f172a', color: '#f1f5f9', fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 16, minHeight: 80, resize: 'vertical', fontFamily: 'inherit' },
-  actions: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 20 },
-  saveBtn: { padding: '10px 24px', borderRadius: 8, border: 'none', background: '#3b82f6', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 14 },
-  deleteBtn: { padding: '10px 16px', borderRadius: 8, border: 'none', background: '#ef444420', color: '#ef4444', fontWeight: 600, cursor: 'pointer', fontSize: 14 },
-  error: { color: '#ef4444', fontSize: 13, marginBottom: 12 },
-};
 
 function formatForInput(dateStr) {
   if (!dateStr) return '';
   const d = new Date(dateStr);
   if (isNaN(d)) return '';
-  return d.toISOString().slice(0, 16); // "YYYY-MM-DDTHH:MM"
+  return d.toISOString().slice(0, 16);
 }
 
 export default function TaskModal({ task, onClose, onUpdated, onDeleted }) {
@@ -49,10 +35,12 @@ export default function TaskModal({ task, onClose, onUpdated, onDeleted }) {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const handleKey = (e) => { if (e.key === 'Escape') onClose(); };
+    const handleKey = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, []);
+  }, [onClose]);
 
   const handleColorSelect = (color) => {
     setSelectedColor(color);
@@ -61,14 +49,20 @@ export default function TaskModal({ task, onClose, onUpdated, onDeleted }) {
 
   const addLabel = (colorOverride) => {
     if (!labelText.trim()) return;
-    setLabels(prev => [...prev, { text: labelText.trim(), color: colorOverride }]);
+    setLabels((prev) => [...prev, { text: labelText.trim(), color: colorOverride }]);
     setLabelText('');
   };
 
-  const removeLabel = (i) => setLabels(prev => prev.filter((_, idx) => idx !== i));
+  const removeLabel = (i) => {
+    setLabels((prev) => prev.filter((_, idx) => idx !== i));
+  };
 
   const handleSave = async () => {
-    if (!title.trim()) { setError('El título es obligatorio'); return; }
+    if (!title.trim()) {
+      setError('Title is required');
+      return;
+    }
+    setError('');
     setLoading(true);
     try {
       const updated = await api.updateTask(task.id, {
@@ -78,7 +72,7 @@ export default function TaskModal({ task, onClose, onUpdated, onDeleted }) {
         dueDate: dueDate || null,
       });
       onUpdated(updated);
-      toast({ message: 'Tarea actualizada' });
+      toast({ message: 'Task updated' });
       onClose();
     } catch (err) {
       setError(err.message);
@@ -88,116 +82,216 @@ export default function TaskModal({ task, onClose, onUpdated, onDeleted }) {
   };
 
   const handleDelete = async () => {
-    
+    if (!confirm(`Delete task "${task.title}"?`)) return;
     try {
       await api.deleteTask(task.id);
       onDeleted(task.id);
-      toast({ message: 'Tarea eliminada', type: 'warning' });
+      toast({ message: 'Task deleted', type: 'warning' });
       onClose();
-    } catch (err) { setError(err.message); }
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
-  // Calcula si la fecha está vencida o próxima
   const getDueDateStatus = () => {
     if (!dueDate) return null;
     const now = new Date();
     const due = new Date(dueDate);
     const diffDays = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
-    if (diffDays < 0) return { text: 'Vencida', color: '#ef4444', bg: '#ef444420' };
-    if (diffDays === 0) return { text: 'Hoy', color: '#f97316', bg: '#f9731620' };
-    if (diffDays <= 2) return { text: `En ${diffDays} día${diffDays > 1 ? 's' : ''}`, color: '#eab308', bg: '#eab30820' };
-    return { text: `En ${diffDays} días`, color: '#22c55e', bg: '#22c55e20' };
+    if (diffDays < 0) return { text: 'Overdue', tone: 'danger' };
+    if (diffDays === 0) return { text: 'Today', tone: 'warning' };
+    if (diffDays <= 2) return { text: `In ${diffDays} day${diffDays > 1 ? 's' : ''}`, tone: 'warning' };
+    return { text: `In ${diffDays} days`, tone: 'success' };
   };
 
   const dueDateStatus = getDueDateStatus();
 
+  const toneStyles = {
+    danger: 'bg-danger/10 border-danger/30 text-danger',
+    warning: 'bg-warning/10 border-warning/30 text-warning',
+    success: 'bg-success/10 border-success/30 text-success',
+  };
+
   return (
-    <div style={s.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div style={s.modal}>
-        <div style={s.header}>
-          <p style={s.title}>Editar tarea</p>
-          <button style={s.closeBtn} onClick={onClose}>✕</button>
-        </div>
-
-        <label style={s.label}>Título</label>
-        <input style={s.input} value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
-
-        <label style={s.label}>Descripción</label>
-        <textarea style={s.textarea} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Agregá una descripción..." />
-
-        <label style={s.label}>Fecha de vencimiento</label>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-          <input
-            type="datetime-local"
-            style={{ ...s.input, marginBottom: 0, flex: 1, colorScheme: 'dark' }}
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-          />
-          {dueDate && (
-            <button
-              onClick={() => setDueDate('')}
-              style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 18, padding: 0 }}
-            >✕</button>
-          )}
-        </div>
-
-        {dueDateStatus && (
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            background: dueDateStatus.bg, border: `1px solid ${dueDateStatus.color}`,
-            color: dueDateStatus.color, borderRadius: 8, padding: '4px 12px',
-            fontSize: 12, fontWeight: 600, marginBottom: 16,
-          }}>
-            📅 {dueDateStatus.text}
-          </div>
-        )}
-
-        <label style={s.label}>Etiquetas</label>
-
-        {labels.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-            {labels.map((lbl, i) => (
-              <span key={i} style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-                background: lbl.color + '30', border: `1px solid ${lbl.color}`,
-                color: lbl.color, borderRadius: 999, padding: '3px 10px', fontSize: 12, fontWeight: 600,
-              }}>
-                {lbl.text}
-                <button onClick={() => removeLabel(i)} style={{ background: 'none', border: 'none', color: lbl.color, cursor: 'pointer', fontSize: 13, padding: 0, lineHeight: 1 }}>✕</button>
-              </span>
-            ))}
-          </div>
-        )}
-
-        <div style={{ display: 'flex', gap: 6, marginBottom: 16, alignItems: 'center' }}>
-          <div style={{ display: 'flex', gap: 4 }}>
-            {LABEL_COLORS.map(({ color }) => (
-              <button key={color} onClick={(e) => { e.stopPropagation(); handleColorSelect(color); }} style={{
-                width: 22, height: 22, borderRadius: '50%', background: color,
-                border: selectedColor === color ? '2px solid white' : '2px solid transparent',
-                cursor: 'pointer', padding: 0,
-                outline: selectedColor === color ? `2px solid ${color}` : 'none', outlineOffset: 1,
-              }} />
-            ))}
-          </div>
-          <input
-            style={{ ...s.input, marginBottom: 0, flex: 1 }}
-            placeholder="Nombre de la etiqueta..."
-            value={labelText}
-            onChange={(e) => setLabelText(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addLabel(selectedColorRef.current)}
-          />
-          <button onClick={() => addLabel(selectedColorRef.current)} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: '#334155', color: '#f1f5f9', cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>
-            + Agregar
+    <div
+      className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="w-full max-w-lg rounded-lg bg-surface border border-border shadow-2xl max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
+          <h2 className="text-base font-medium tracking-tight">Edit task</h2>
+          <button
+            onClick={onClose}
+            className="w-7 h-7 flex items-center justify-center rounded-md text-text-muted hover:text-text hover:bg-surface-2 transition-colors"
+            aria-label="Close"
+          >
+            <span className="text-lg leading-none">×</span>
           </button>
         </div>
 
-        {error && <p style={s.error}>{error}</p>}
+        {/* Body */}
+        <div className="px-6 py-5 space-y-5 overflow-y-auto">
+          {/* Title */}
+          <div className="space-y-1.5">
+            <label htmlFor="task-title" className="block text-xs font-mono uppercase tracking-wider text-text-muted">
+              Title
+            </label>
+            <input
+              id="task-title"
+              type="text"
+              autoFocus
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full px-3 py-2 text-sm bg-bg border border-border rounded-md text-text placeholder:text-text-subtle focus:outline-none focus:border-accent transition-colors"
+            />
+          </div>
 
-        <div style={s.actions}>
-          <button style={s.deleteBtn} onClick={handleDelete}>🗑️ Eliminar</button>
-          <button style={{ ...s.saveBtn, opacity: loading ? 0.7 : 1 }} onClick={handleSave} disabled={loading}>
-            {loading ? 'Guardando...' : 'Guardar'}
+          {/* Description */}
+          <div className="space-y-1.5">
+            <label htmlFor="task-description" className="block text-xs font-mono uppercase tracking-wider text-text-muted">
+              Description
+            </label>
+            <textarea
+              id="task-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Add a description..."
+              rows={3}
+              className="w-full px-3 py-2 text-sm bg-bg border border-border rounded-md text-text placeholder:text-text-subtle focus:outline-none focus:border-accent transition-colors resize-y min-h-[80px]"
+            />
+          </div>
+
+          {/* Due date */}
+          <div className="space-y-1.5">
+            <label htmlFor="task-due" className="block text-xs font-mono uppercase tracking-wider text-text-muted">
+              Due date
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                id="task-due"
+                type="datetime-local"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                style={{ colorScheme: 'dark' }}
+                className="flex-1 px-3 py-2 text-sm bg-bg border border-border rounded-md text-text focus:outline-none focus:border-accent transition-colors"
+              />
+              {dueDate && (
+                <button
+                  onClick={() => setDueDate('')}
+                  className="w-9 h-9 flex items-center justify-center rounded-md text-text-muted hover:text-text hover:bg-surface-2 transition-colors"
+                  aria-label="Clear due date"
+                >
+                  <span className="text-lg leading-none">×</span>
+                </button>
+              )}
+            </div>
+            {dueDateStatus && (
+              <div className={`inline-flex items-center px-2 py-0.5 text-xs font-mono uppercase tracking-wider rounded border ${toneStyles[dueDateStatus.tone]}`}>
+                {dueDateStatus.text}
+              </div>
+            )}
+          </div>
+
+          {/* Labels */}
+          <div className="space-y-2">
+            <label className="block text-xs font-mono uppercase tracking-wider text-text-muted">
+              Labels
+            </label>
+
+            {labels.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {labels.map((lbl, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium border"
+                    style={{
+                      backgroundColor: `${lbl.color}20`,
+                      borderColor: `${lbl.color}60`,
+                      color: lbl.color,
+                    }}
+                  >
+                    {lbl.text}
+                    <button
+                      onClick={() => removeLabel(i)}
+                      className="leading-none hover:opacity-70 transition-opacity"
+                      style={{ color: lbl.color }}
+                      aria-label={`Remove label ${lbl.text}`}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1 flex-shrink-0">
+                {LABEL_COLORS.map(({ color, name }) => (
+                  <button
+                    key={color}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleColorSelect(color);
+                    }}
+                    className="w-6 h-6 rounded-full transition-transform hover:scale-110"
+                    style={{
+                      backgroundColor: color,
+                      outline: selectedColor === color ? `2px solid ${color}` : 'none',
+                      outlineOffset: '2px',
+                    }}
+                    aria-label={`Select ${name} color`}
+                    title={name}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Label name..."
+                value={labelText}
+                onChange={(e) => setLabelText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addLabel(selectedColorRef.current);
+                  }
+                }}
+                className="flex-1 px-3 py-2 text-sm bg-bg border border-border rounded-md text-text placeholder:text-text-subtle focus:outline-none focus:border-accent transition-colors"
+              />
+              <button
+                onClick={() => addLabel(selectedColorRef.current)}
+                disabled={!labelText.trim()}
+                className="px-3 py-2 text-sm font-medium bg-surface-2 border border-border text-text rounded-md hover:bg-surface-2 hover:border-border-strong transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              >
+                + Add
+              </button>
+            </div>
+          </div>
+
+          {error && (
+            <div className="px-3 py-2 text-sm rounded-md bg-danger/10 border border-danger/30 text-danger">
+              {error}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-6 py-4 border-t border-border flex-shrink-0">
+          <button
+            onClick={handleDelete}
+            className="px-3 py-2 text-sm font-medium text-danger hover:bg-danger/10 rounded-md transition-colors"
+          >
+            Delete
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={loading}
+            className="px-4 py-2 text-sm font-medium bg-text text-bg rounded-md hover:bg-text/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Saving...' : 'Save'}
           </button>
         </div>
       </div>
