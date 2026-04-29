@@ -1,57 +1,9 @@
 'use client';
+
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { api } from '../../lib/api';
-
-const s = {
-  page: {
-    minHeight: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    padding: 24,
-  },
-  card: {
-    background: '#fff',
-    borderRadius: 24,
-    padding: '48px 44px',
-    width: '100%',
-    maxWidth: 420,
-    boxShadow: '0 30px 60px rgba(0,0,0,0.3)',
-  },
-  logo: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 32 },
-  logoIcon: { fontSize: 32 },
-  logoText: { fontSize: 28, fontWeight: 900, color: '#0f172a', letterSpacing: '-1px' },
-  title: { margin: '0 0 6px', fontSize: 22, fontWeight: 800, color: '#0f172a' },
-  subtitle: { margin: '0 0 28px', color: '#64748b', fontSize: 14 },
-  label: {
-    display: 'block', fontSize: 12, fontWeight: 600, color: '#475569',
-    marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5,
-  },
-  input: {
-    width: '100%', padding: '12px 14px', borderRadius: 10,
-    border: '1.5px solid #e2e8f0', fontSize: 14, outline: 'none',
-    background: '#f8fafc', marginBottom: 16, boxSizing: 'border-box',
-  },
-  btn: {
-    width: '100%', padding: '14px', borderRadius: 10, border: 'none',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer',
-    marginTop: 4, boxShadow: '0 4px 15px rgba(102,126,234,0.5)',
-  },
-  toggle: { textAlign: 'center', marginTop: 20, fontSize: 14, color: '#64748b' },
-  toggleBtn: {
-    background: 'none', border: 'none', color: '#6366f1',
-    fontWeight: 700, cursor: 'pointer', fontSize: 14,
-  },
-  error: {
-    color: '#ef4444', fontSize: 13, marginBottom: 16,
-    padding: '10px 12px', background: '#fef2f2', borderRadius: 8,
-  },
-  features: { display: 'flex', justifyContent: 'center', gap: 20, marginTop: 28, flexWrap: 'wrap' },
-  feature: { fontSize: 12, color: '#94a3b8' },
-};
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -78,50 +30,127 @@ export default function AuthPage() {
     }
   };
 
+  const toggleMode = () => {
+    setIsLogin(!isLogin);
+    setError('');
+  };
+
   return (
-    <div style={s.page}>
-      <div style={s.card}>
-        <div style={s.logo}>
-          <span style={s.logoIcon}>📋</span>
-          <span style={s.logoText}>Taskly</span>
-        </div>
-
-        <h2 style={s.title}>{isLogin ? 'Bienvenido de vuelta' : 'Crear cuenta gratis'}</h2>
-        <p style={s.subtitle}>{isLogin ? 'Iniciá sesión para continuar' : 'Sin tarjeta de crédito requerida'}</p>
-
-        <form onSubmit={handleSubmit}>
-          {!isLogin && (
-            <>
-              <label style={s.label}>Nombre</label>
-              <input style={s.input} placeholder="Tu nombre" value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })} />
-            </>
-          )}
-          <label style={s.label}>Email</label>
-          <input style={s.input} placeholder="tu@email.com" type="email" value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })} />
-          <label style={s.label}>Contraseña</label>
-          <input style={s.input} placeholder="••••••••" type="password" value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })} />
-          {error && <p style={s.error}>⚠️ {error}</p>}
-          <button style={{ ...s.btn, opacity: loading ? 0.7 : 1 }} type="submit" disabled={loading}>
-            {loading ? 'Cargando...' : isLogin ? 'Iniciar sesión' : 'Crear cuenta'}
-          </button>
-        </form>
-
-        <div style={s.toggle}>
-          {isLogin ? '¿No tenés cuenta?' : '¿Ya tenés cuenta?'}{' '}
-          <button style={s.toggleBtn} onClick={() => { setIsLogin(!isLogin); setError(''); }}>
-            {isLogin ? 'Registrate gratis' : 'Iniciá sesión'}
-          </button>
-        </div>
-
-        <div style={s.features}>
-          {['🗂️ Tableros', '🎯 Drag & drop', '👥 Equipos'].map(f => (
-            <div key={f} style={s.feature}>{f}</div>
-          ))}
-        </div>
+    <main className="min-h-screen bg-bg text-text flex items-center justify-center p-6">
+      <div className="absolute top-6 left-6">
+        <Link
+          href="/"
+          className="flex items-center gap-2 text-sm text-text-muted hover:text-text transition-colors"
+        >
+          <span>&larr;</span>
+          <span>Back home</span>
+        </Link>
       </div>
-    </div>
+
+      <div className="w-full max-w-sm">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-9 h-9 rounded-md bg-accent-soft border border-accent/30 flex items-center justify-center">
+            <span className="text-accent font-mono font-medium">T</span>
+          </div>
+          <span className="font-medium tracking-tight text-lg">Taskly</span>
+          <span className="px-2 py-0.5 text-xs font-mono rounded bg-surface border border-border text-text-muted">
+            for developers
+          </span>
+        </div>
+
+        <div className="rounded-lg bg-surface border border-border p-8 space-y-6">
+          <div className="space-y-1.5">
+            <h1 className="text-xl font-medium tracking-tight">
+              {isLogin ? 'Welcome back' : 'Create your account'}
+            </h1>
+            <p className="text-sm text-text-muted">
+              {isLogin
+                ? 'Sign in to continue to your boards.'
+                : 'No credit card required. Free forever for personal projects.'}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {!isLogin && (
+              <div className="space-y-1.5">
+                <label htmlFor="name" className="block text-xs font-mono uppercase tracking-wider text-text-muted">
+                  Name
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  required
+                  autoComplete="name"
+                  placeholder="Your name"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="w-full px-3 py-2 text-sm bg-bg border border-border rounded-md text-text placeholder:text-text-subtle focus:outline-none focus:border-accent transition-colors"
+                />
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <label htmlFor="email" className="block text-xs font-mono uppercase tracking-wider text-text-muted">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                required
+                autoComplete="email"
+                placeholder="you@email.com"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                className="w-full px-3 py-2 text-sm bg-bg border border-border rounded-md text-text placeholder:text-text-subtle focus:outline-none focus:border-accent transition-colors"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor="password" className="block text-xs font-mono uppercase tracking-wider text-text-muted">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                required
+                autoComplete={isLogin ? 'current-password' : 'new-password'}
+                placeholder="At least 8 characters"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                className="w-full px-3 py-2 text-sm bg-bg border border-border rounded-md text-text placeholder:text-text-subtle focus:outline-none focus:border-accent transition-colors"
+              />
+            </div>
+
+            {error && (
+              <div className="px-3 py-2 text-sm rounded-md bg-danger/10 border border-danger/30 text-danger">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full px-4 py-2.5 text-sm font-medium bg-text text-bg rounded-md hover:bg-text/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Loading...' : isLogin ? 'Sign in' : 'Create account'}
+            </button>
+          </form>
+
+          <div className="text-center text-sm text-text-muted">
+            {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
+            <button
+              onClick={toggleMode}
+              className="text-accent hover:text-accent-hover font-medium transition-colors"
+            >
+              {isLogin ? 'Sign up' : 'Sign in'}
+            </button>
+          </div>
+        </div>
+
+        <p className="text-center text-xs font-mono text-text-subtle mt-6">
+          By continuing, you agree to our terms.
+        </p>
+      </div>
+    </main>
   );
 }
