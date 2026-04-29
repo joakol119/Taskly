@@ -31,6 +31,7 @@ export default function TaskModal({ task, onClose, onUpdated, onDeleted }) {
   const [selectedColor, setSelectedColor] = useState(LABEL_COLORS[0].color);
   const selectedColorRef = useRef(LABEL_COLORS[0].color);
   const [dueDate, setDueDate] = useState(formatForInput(task.dueDate));
+  const [done, setDone] = useState(task.done || false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -70,6 +71,7 @@ export default function TaskModal({ task, onClose, onUpdated, onDeleted }) {
         description: description.trim(),
         labels,
         dueDate: dueDate || null,
+        done,
       });
       onUpdated(updated);
       toast({ message: 'Task updated' });
@@ -132,6 +134,36 @@ export default function TaskModal({ task, onClose, onUpdated, onDeleted }) {
 
         {/* Body */}
         <div className="px-6 py-5 space-y-5 overflow-y-auto">
+          {/* Done toggle */}
+          <button
+            type="button"
+            onClick={() => setDone(!done)}
+            className={`flex items-center gap-3 w-full px-3 py-2 rounded-md border transition-colors ${
+              done
+                ? 'bg-success/10 border-success/30 text-success hover:bg-success/15'
+                : 'bg-bg border-border text-text-muted hover:border-border-strong hover:text-text'
+            }`}
+          >
+            <span
+              className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
+                done ? 'bg-success' : 'bg-transparent border border-border-strong'
+              }`}
+            >
+              {done && (
+                <svg className="w-3 h-3 text-bg" viewBox="0 0 20 20" fill="currentColor">
+                  <path
+                    fillRule="evenodd"
+                    d="M16.704 5.29a1 1 0 010 1.42l-8 8a1 1 0 01-1.42 0l-4-4a1 1 0 111.42-1.42L8 12.59l7.29-7.3a1 1 0 011.414 0z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              )}
+            </span>
+            <span className="text-sm font-medium">
+              {done ? 'Marked as done' : 'Mark as done'}
+            </span>
+          </button>
+
           {/* Title */}
           <div className="space-y-1.5">
             <label htmlFor="task-title" className="block text-xs font-mono uppercase tracking-wider text-text-muted">
@@ -143,7 +175,9 @@ export default function TaskModal({ task, onClose, onUpdated, onDeleted }) {
               autoFocus
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2 text-sm bg-bg border border-border rounded-md text-text placeholder:text-text-subtle focus:outline-none focus:border-accent transition-colors"
+              className={`w-full px-3 py-2 text-sm bg-bg border border-border rounded-md text-text placeholder:text-text-subtle focus:outline-none focus:border-accent transition-colors ${
+                done ? 'line-through opacity-60' : ''
+              }`}
             />
           </div>
 
@@ -264,7 +298,7 @@ export default function TaskModal({ task, onClose, onUpdated, onDeleted }) {
               <button
                 onClick={() => addLabel(selectedColorRef.current)}
                 disabled={!labelText.trim()}
-                className="px-3 py-2 text-sm font-medium bg-surface-2 border border-border text-text rounded-md hover:bg-surface-2 hover:border-border-strong transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                className="px-3 py-2 text-sm font-medium bg-surface-2 border border-border text-text rounded-md hover:border-border-strong transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
               >
                 + Add
               </button>
