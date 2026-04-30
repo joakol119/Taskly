@@ -1,155 +1,140 @@
 # Taskly
 
-A full-stack Kanban board application built for portfolio purposes. Manage projects visually with boards, columns, and draggable task cards.
+> The task manager built for developers.
 
-**[Live Demo](https://taskly-seven-wheat.vercel.app)**
+A full-stack kanban app with JWT auth, real-time drag and drop, and a dark-first UI inspired by Linear and Vercel. Built as a portfolio project to showcase end-to-end product engineering — from schema design to deploy.
 
-
----
-
-## Screenshot
-
-![Landing](docs/landing.png)
-![Features](docs/features.png)
-![Login](docs/login.png)
-![Boards](docs/boards.png)
+**Live demo:** [taskly-seven-wheat.vercel.app](https://taskly-seven-wheat.vercel.app)
 
 ---
+
+![Boards listing](docs/screenshots/boards-list.png)
 
 ## Features
 
-- 🗂️ **Boards** — Create, rename, reorder and color-code your project boards
-- 📋 **Columns** — Organize tasks in customizable columns with inline renaming
-- 🎯 **Drag & Drop** — Move tasks between columns and reorder boards intuitively
-- 🏷️ **Labels** — Color-coded labels to categorize and prioritize tasks
-- 📅 **Due Dates** — Set deadlines with visual alerts (overdue, due today, upcoming)
-- 👥 **Team Collaboration** — Invite members to boards by email
-- 🌙 **Dark / Light Mode** — Fully themed UI with persistent preference
-- 🔐 **Authentication** — JWT-based login and registration
+- **JWT authentication** — register, login, persistent sessions
+- **Boards, columns and tasks** with native HTML5 drag & drop
+- **Color-coded labels** with custom names per task
+- **Due dates** with relative status indicators (Overdue, Today, In 2 days)
+- **Mark as done** inline from the board or from the task modal
+- **Board analytics** — task count, columns, members and live progress bar per board
+- **Multi-user collaboration** — invite teammates by email, transfer ownership not allowed
+- **Reorder anything** — boards, columns, tasks, all draggable
+- **Dark-first UI** with the Geist typeface and a restrained accent palette
 
----
+## Stack
 
-## Tech Stack
+| Layer       | Tech                                  |
+|-------------|---------------------------------------|
+| Frontend    | Next.js 14 (App Router), React 18, Tailwind v3, Geist Sans/Mono |
+| Backend     | Node.js 20, Express, raw SQL via `pg` |
+| Database    | PostgreSQL 15                         |
+| Auth        | JWT in localStorage                   |
+| Container   | Docker Compose (db + backend + frontend) |
+| Deploy      | Vercel (frontend) + Railway (backend + DB) |
 
-**Frontend**
-- [Next.js 14](https://nextjs.org/) — React framework with App Router
-- [Tailwind CSS](https://tailwindcss.com/) — Utility-first styling
-- [@hello-pangea/dnd](https://github.com/hello-pangea/dnd) — Drag and drop
-
-**Backend**
-- [Node.js](https://nodejs.org/) + [Express](https://expressjs.com/) — REST API
-- [PostgreSQL](https://www.postgresql.org/) — Relational database
-- [`pg`](https://node-postgres.com/) — Raw SQL queries (no ORM)
-- [JWT](https://jwt.io/) — Stateless authentication
-
-**Infrastructure**
-- [Docker](https://www.docker.com/) — Local development environment
-- [Vercel](https://vercel.com/) — Frontend deployment
-- [Railway](https://railway.app/) — Backend + database deployment
-
----
-
-## Getting Started
-
-### Prerequisites
-
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-- [Git](https://git-scm.com/)
-
-### Installation
-
-1. Clone the repository
-   ```bash
-   git clone https://github.com/joakol119/Taskly.git
-   cd Taskly
-   ```
-
-2. Create a `.env` file in the root (see `.env.example`)
-
-3. Start the application
-   ```bash
-   docker compose up --build
-   ```
-
-4. Open [http://localhost:3000](http://localhost:3000)
-
----
-
-## Environment Variables
-
-Create a `.env` file based on `.env.example`:
-
-```env
-# Database
-POSTGRES_USER=taskly
-POSTGRES_PASSWORD=your_password
-POSTGRES_DB=taskly
-
-# Backend
-JWT_SECRET=your_jwt_secret
-
-# Frontend
-NEXT_PUBLIC_API_URL=http://localhost:4000
-```
-
----
-
-## API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/auth/register` | Register a new user |
-| POST | `/auth/login` | Login and get JWT token |
-| GET | `/boards` | Get all boards for current user |
-| POST | `/boards` | Create a new board |
-| PATCH | `/boards/reorder` | Reorder boards |
-| GET | `/boards/:id` | Get board with columns and tasks |
-| PATCH | `/boards/:id` | Rename or update board color |
-| DELETE | `/boards/:id` | Delete a board |
-| POST | `/boards/:id/duplicate` | Duplicate a board |
-| POST | `/boards/:id/members` | Invite a member by email |
-| POST | `/columns` | Create a column |
-| PATCH | `/columns/:id` | Rename a column |
-| DELETE | `/columns/:id` | Delete a column |
-| POST | `/tasks` | Create a task |
-| PATCH | `/tasks/:id` | Update task (title, description, labels, due date) |
-| PATCH | `/tasks/:id/move` | Move task to another column |
-| DELETE | `/tasks/:id` | Delete a task |
-
----
-
-## Project Structure
+## Architecture
 
 ```
-taskly/
-├── backend/
-│   └── src/
-│       ├── middleware/     # JWT auth middleware
-│       ├── routes/         # Express route handlers
-│       ├── db.js           # PostgreSQL connection
-│       └── index.js        # Express app entry point
-├── frontend/
-│   └── src/
-│       ├── app/            # Next.js App Router pages
-│       │   ├── page.js         # Landing page
-│       │   ├── login/          # Auth page
-│       │   └── boards/         # Board pages
-│       ├── components/     # Reusable components
-│       └── lib/            # API client, theme utils
-├── docker-compose.yml
-└── README.md
+┌─────────────────┐         ┌─────────────────┐         ┌─────────────────┐
+│  Next.js (web)  │  HTTPS  │  Express (API)  │   SQL   │   PostgreSQL    │
+│   Vercel CDN    ├────────►│    Railway      ├────────►│    Railway      │
+└─────────────────┘         └─────────────────┘         └─────────────────┘
 ```
 
----
+Single-page client talks to a stateless REST API. The API issues JWTs, the client persists them in `localStorage` and sends them as `Authorization: Bearer ...` on every request.
 
-## Author
+## Technical decisions
 
-**Joaquín Poblete**
-- GitHub: [@joakol119](https://github.com/joakol119)
-- LinkedIn: [Joaquín Poblete](https://www.linkedin.com/in/joaquin-poblete-esteves-315780234/)
+A few choices worth highlighting, with the reasoning behind each.
 
----
+### Raw SQL with `pg` instead of an ORM
 
-## License
+Originally built with Prisma. After hitting OpenSSL incompatibilities with Alpine-based Docker images, the entire data layer was rewritten using raw queries through `pg`. The tradeoff: more boilerplate in routes, but full control over SQL, smaller image size, fewer moving parts. For a project this size, an ORM was net negative.
 
-This project is open source and available under the [MIT License](LICENSE).
+### HTML5 native drag and drop, not a library
+
+The boards list uses CSS Grid for layout. Most popular DnD libraries (`react-beautiful-dnd`, `@hello-pangea/dnd`) don't play well with grid containers. Started with `@hello-pangea/dnd` for the column drag inside boards, then migrated everything to native HTML5 DnD for consistency. The library is gone from `package.json`. Less bundle, fewer dependencies.
+
+### Alpine instead of `node:20`
+
+After removing Prisma, the OpenSSL workaround was no longer needed. Switched the backend image from `node:20` (~400MB) to `node:20-alpine` (~50MB). Faster builds on Railway, cheaper to ship.
+
+### Counts at the API level, not on the client
+
+The boards listing renders cards with stats — number of columns, tasks, completed tasks, members. Could have been done with N+1 client requests. Instead, `GET /boards` does subqueries server-side and returns those counts in the response. One request, no waterfalls.
+
+```sql
+SELECT
+  b.*,
+  (SELECT COUNT(*) FROM columns WHERE board_id = b.id) AS column_count,
+  (SELECT COUNT(*) FROM tasks t JOIN columns c ON t.column_id = c.id
+                   WHERE c.board_id = b.id) AS task_count,
+  (SELECT COUNT(*) FROM tasks t JOIN columns c ON t.column_id = c.id
+                   WHERE c.board_id = b.id AND t.done = true) AS done_count,
+  (SELECT COUNT(*) FROM board_members WHERE board_id = b.id) AS member_count
+FROM boards b ...
+```
+
+### Dark-first design system
+
+Tailwind v3 with a custom palette inspired by Linear: near-black backgrounds (`#0A0A0B`, not pure black), restrained accent palette, exponential gray scale for hierarchy. Geist Sans for UI, Geist Mono for technical accents (IDs, tags, metadata). Light mode is on the roadmap.
+
+## Screenshots
+
+![Board view with columns, tasks and labels](docs/screenshots/board-view.png)
+
+![Landing page](docs/screenshots/landing.png)
+
+![Task modal with labels and due date](docs/screenshots/task-modal.png)
+
+## Run locally
+
+Requires Docker Desktop.
+
+```bash
+git clone https://github.com/joakol119/Taskly.git
+cd Taskly
+docker compose up --build
+```
+
+The app will be available at:
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:4000`
+
+To run only the database and backend (and use `npm run dev` for frontend hot reload):
+
+```bash
+docker compose up backend db
+cd frontend && npm install && npm run dev
+```
+
+### Environment variables
+
+Defaults are provided in `docker-compose.yml` for local development. For production you'll need:
+
+```
+DATABASE_URL=postgresql://...
+JWT_SECRET=<random-string>
+NEXT_PUBLIC_API_URL=<your-backend-url>
+```
+
+## Roadmap
+
+- [ ] **GitHub OAuth login** — sign in with GitHub
+- [ ] **GitHub issues import** — bring open issues from a repo into a board with one click
+- [ ] **AI breakdowns** — break down a vague ticket into subtasks with Claude
+- [ ] **Velocity dashboard** — track tasks completed per week, time estimates vs real
+- [ ] **Light mode** — full theme support
+- [ ] **Backend tests** — Vitest integration tests for auth and CRUD
+- [ ] **Email invitations** — actual emails when someone is added to a board
+
+## About
+
+Built by **Joaquín Poblete**, junior full-stack developer based in Montevideo, Uruguay.
+
+- LinkedIn — [linkedin.com/in/joaquin-poblete-esteves](https://www.linkedin.com/in/joaquin-poblete-esteves-315780234/)
+- Email — [joaquinpobletesteves@gmail.com](mailto:joaquinpobletesteves@gmail.com)
+- GitHub — [@joakol119](https://github.com/joakol119)
+
+Open to junior frontend, backend or full-stack roles.
