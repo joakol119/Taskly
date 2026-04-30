@@ -5,7 +5,7 @@ const authRoutes = require('./routes/auth');
 const boardRoutes = require('./routes/boards');
 const columnRoutes = require('./routes/columns');
 const taskRoutes = require('./routes/tasks');
-
+const aiRoutes = require('./routes/ai');                    
 const app = express();
 const PORT = process.env.PORT || 4000;
 
@@ -16,6 +16,7 @@ db.init().then(() => {
   app.use('/boards', boardRoutes);
   app.use('/columns', columnRoutes);
   app.use('/tasks', taskRoutes);
+  app.use('/', aiRoutes);
   app.get('/health', (req, res) => res.json({ status: 'ok' }));
   app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
 }).catch(err => {
