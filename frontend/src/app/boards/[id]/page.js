@@ -11,6 +11,24 @@ function getInitial(name) {
   return name ? name.trim().charAt(0).toUpperCase() : '?';
 }
 
+function getDueDateStatus(dueDate) {
+  if (!dueDate) return null;
+  const now = new Date();
+  const due = new Date(dueDate);
+  if (isNaN(due)) return null;
+  const diffDays = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+  if (diffDays < 0) return { text: 'Overdue', tone: 'danger' };
+  if (diffDays === 0) return { text: 'Today', tone: 'warning' };
+  if (diffDays <= 2) return { text: `In ${diffDays} day${diffDays > 1 ? 's' : ''}`, tone: 'warning' };
+  return { text: `In ${diffDays} days`, tone: 'success' };
+}
+
+const DUE_TONE_STYLES = {
+  danger: 'bg-danger/10 border-danger/30 text-danger',
+  warning: 'bg-warning/10 border-warning/30 text-warning',
+  success: 'bg-success/10 border-success/30 text-success',
+};
+
 export default function BoardPage() {
   const [board, setBoard] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -24,8 +42,7 @@ export default function BoardPage() {
   const [editingBoardName, setEditingBoardName] = useState(false);
   const [boardNameValue, setBoardNameValue] = useState('');
 
-  // Drag state
-  const [draggingTask, setDraggingTask] = useState(null); // { taskId, fromColId, fromIndex }
+  const [draggingTask, setDraggingTask] = useState(null);
   const [dragOverCol, setDragOverCol] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
 
@@ -51,8 +68,6 @@ export default function BoardPage() {
       .catch(() => toast({ message: 'Failed to load board', type: 'error' }))
       .finally(() => setLoading(false));
   }, [params.id]);
-
-  // ====== Column operations ======
 
   const handleAddColumn = async (e) => {
     e.preventDefault();
@@ -106,8 +121,6 @@ export default function BoardPage() {
     setEditingColId(null);
   };
 
-  // ====== Task operations ======
-
   const handleAddTask = async (colId) => {
     const title = (newTaskInputs[colId] || '').trim();
     if (!title) return;
@@ -148,7 +161,6 @@ export default function BoardPage() {
   const handleToggleDone = async (e, task) => {
     e.stopPropagation();
     const newDone = !task.done;
-    // Optimistic update
     setBoard((prev) => ({
       ...prev,
       columns: prev.columns.map((c) => ({
@@ -159,7 +171,6 @@ export default function BoardPage() {
     try {
       await api.updateTask(task.id, { done: newDone });
     } catch (err) {
-      // Revert on error
       setBoard((prev) => ({
         ...prev,
         columns: prev.columns.map((c) => ({
@@ -170,8 +181,6 @@ export default function BoardPage() {
       toast({ message: 'Failed to update task', type: 'error' });
     }
   };
-
-  // ====== Board name ======
 
   const startEditBoard = () => {
     setBoardNameValue(board.name);
@@ -192,8 +201,6 @@ export default function BoardPage() {
     setEditingBoardName(false);
   };
 
-  // ====== Drag & Drop (HTML5 native) ======
-
   const handleDragStart = (e, task, colId, index) => {
     setDraggingTask({ taskId: task.id, fromColId: colId, fromIndex: index });
     e.dataTransfer.effectAllowed = 'move';
@@ -210,7 +217,6 @@ export default function BoardPage() {
     e.preventDefault();
     if (dragOverCol !== colId) {
       setDragOverCol(colId);
-      // If hovering on empty area, drop at end
       const col = board.columns.find((c) => c.id === colId);
       setDragOverIndex(col ? col.tasks.length : 0);
     }
@@ -222,22 +228,18 @@ export default function BoardPage() {
 
     const { taskId, fromColId, fromIndex } = draggingTask;
 
-    // Reset drag state
     setDraggingTask(null);
     setDragOverCol(null);
     setDragOverIndex(null);
 
-    // Same position, do nothing
     if (fromColId === destColId && fromIndex === destIndex) return;
     if (fromColId === destColId && fromIndex + 1 === destIndex) return;
 
-    // Calculate the actual destination index (compensate for removal)
     let actualDestIndex = destIndex;
     if (fromColId === destColId && fromIndex < destIndex) {
       actualDestIndex = destIndex - 1;
     }
 
-    // Optimistic update
     const newColumns = board.columns.map((c) => ({ ...c, tasks: [...c.tasks] }));
     const sourceCol = newColumns.find((c) => c.id === fromColId);
     const destCol = newColumns.find((c) => c.id === destColId);
@@ -250,7 +252,6 @@ export default function BoardPage() {
       await api.moveTask(taskId, { columnId: destColId, order: actualDestIndex });
     } catch (err) {
       toast({ message: 'Failed to move task', type: 'error' });
-      // Refetch to revert
       fetchBoard();
     }
   };
@@ -260,8 +261,6 @@ export default function BoardPage() {
     setDragOverCol(null);
     setDragOverIndex(null);
   };
-
-  // ====== Render ======
 
   if (loading) {
     return (
@@ -287,7 +286,6 @@ export default function BoardPage() {
 
   return (
     <div className="min-h-screen bg-bg text-text flex flex-col">
-      {/* Header */}
       <header className="sticky top-0 z-50 bg-bg/80 backdrop-blur-md border-b border-border">
         <div className="h-14 px-8 flex items-center gap-4">
           <button
@@ -331,7 +329,6 @@ export default function BoardPage() {
         </div>
       </header>
 
-      {/* Columns */}
       <div className="flex-1 flex items-start gap-4 px-8 py-6 overflow-x-auto">
         {board.columns.map((col) => {
           const isDragOverHere = dragOverCol === col.id;
@@ -345,7 +342,6 @@ export default function BoardPage() {
               }`}
               style={{ maxHeight: 'calc(100vh - 110px)' }}
             >
-              {/* Column header */}
               <div className="flex items-center justify-between gap-2 px-3 py-3 border-b border-border">
                 {editingColId === col.id ? (
                   <input
@@ -380,7 +376,6 @@ export default function BoardPage() {
                 </button>
               </div>
 
-              {/* Tasks */}
               <div className="flex-1 overflow-y-auto p-2 space-y-2 min-h-[20px]">
                 {col.tasks.map((task, index) => {
                   const showDropIndicator =
@@ -388,6 +383,7 @@ export default function BoardPage() {
                     dragOverIndex === index &&
                     !(draggingTask?.fromColId === col.id && draggingTask?.fromIndex === index);
                   const isBeingDragged = draggingTask?.taskId === task.id;
+                  const dueStatus = getDueDateStatus(task.dueDate);
 
                   return (
                     <div key={task.id}>
@@ -405,7 +401,6 @@ export default function BoardPage() {
                         }`}
                       >
                         <div className="flex items-start gap-2">
-                          {/* Done checkbox */}
                           <button
                             onClick={(e) => handleToggleDone(e, task)}
                             className={`w-4 h-4 mt-0.5 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
@@ -460,6 +455,13 @@ export default function BoardPage() {
                                 {task.description}
                               </p>
                             )}
+                            {dueStatus && !task.done && (
+                              <div
+                                className={`inline-flex items-center mt-2 px-1.5 py-0 text-[10px] font-mono uppercase tracking-wider rounded border ${DUE_TONE_STYLES[dueStatus.tone]}`}
+                              >
+                                {dueStatus.text}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -467,7 +469,6 @@ export default function BoardPage() {
                   );
                 })}
 
-                {/* Drop indicator at end of column */}
                 {isDragOverHere &&
                   dragOverIndex === col.tasks.length &&
                   !(
@@ -476,7 +477,6 @@ export default function BoardPage() {
                   ) && <div className="h-0.5 bg-accent rounded" />}
               </div>
 
-              {/* Add task input */}
               <div className="p-2 border-t border-border">
                 <input
                   placeholder="+ Add task..."
@@ -500,7 +500,6 @@ export default function BoardPage() {
           );
         })}
 
-        {/* Add column form */}
         <form
           onSubmit={handleAddColumn}
           className="flex flex-col w-72 flex-shrink-0 rounded-lg bg-surface/50 border border-dashed border-border p-3 gap-2 self-start"
@@ -521,7 +520,6 @@ export default function BoardPage() {
         </form>
       </div>
 
-      {/* Modals */}
       {selectedTask && (
         <TaskModal
           task={selectedTask}

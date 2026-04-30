@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useRouter } from 'next/navigation';
 
@@ -8,7 +8,7 @@ export default function LandingPage() {
   return (
     <main className="min-h-screen bg-bg text-text">
       <nav className="fixed top-0 inset-x-0 z-50 backdrop-blur-md bg-bg/80 border-b border-border">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+        <div className="px-8 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-7 h-7 rounded-md bg-accent-soft border border-accent/30 flex items-center justify-center">
               <span className="text-accent font-mono text-sm font-medium">T</span>
@@ -87,8 +87,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="border-t border-border py-8 px-6">
-        <div className="max-w-6xl mx-auto flex items-center justify-between text-xs font-mono text-text-subtle">
+      <footer className="border-t border-border py-8 px-8">
+        <div className="flex items-center justify-between text-xs font-mono text-text-subtle">
           <span>Taskly - Built by Joaquin</span>
           <span>Next.js, Express, PostgreSQL</span>
         </div>

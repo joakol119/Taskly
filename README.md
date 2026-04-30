@@ -8,7 +8,7 @@ A full-stack kanban app with JWT auth, real-time drag and drop, and a dark-first
 
 ---
 
-![Boards listing](docs/screenshots/boards-list.png)
+![Landing page](docs/screenshots/landing.png)
 
 ## Features
 
@@ -18,9 +18,11 @@ A full-stack kanban app with JWT auth, real-time drag and drop, and a dark-first
 - **Due dates** with relative status indicators (Overdue, Today, In 2 days)
 - **Mark as done** inline from the board or from the task modal
 - **Board analytics** — task count, columns, members and live progress bar per board
-- **Multi-user collaboration** — invite teammates by email, transfer ownership not allowed
+- **Multi-user collaboration** — invite teammates by email
 - **Reorder anything** — boards, columns, tasks, all draggable
 - **Dark-first UI** with the Geist typeface and a restrained accent palette
+
+![Boards listing](docs/screenshots/boards-list.png)
 
 ## Stack
 
@@ -43,6 +45,8 @@ A full-stack kanban app with JWT auth, real-time drag and drop, and a dark-first
 ```
 
 Single-page client talks to a stateless REST API. The API issues JWTs, the client persists them in `localStorage` and sends them as `Authorization: Bearer ...` on every request.
+
+![Board view with columns, tasks and labels](docs/screenshots/board-view.png)
 
 ## Technical decisions
 
@@ -79,12 +83,6 @@ FROM boards b ...
 ### Dark-first design system
 
 Tailwind v3 with a custom palette inspired by Linear: near-black backgrounds (`#0A0A0B`, not pure black), restrained accent palette, exponential gray scale for hierarchy. Geist Sans for UI, Geist Mono for technical accents (IDs, tags, metadata). Light mode is on the roadmap.
-
-## Screenshots
-
-![Board view with columns, tasks and labels](docs/screenshots/board-view.png)
-
-![Landing page](docs/screenshots/landing.png)
 
 ![Task modal with labels and due date](docs/screenshots/task-modal.png)
 
