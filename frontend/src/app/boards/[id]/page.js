@@ -521,13 +521,23 @@ export default function BoardPage() {
       </div>
 
       {selectedTask && (
-        <TaskModal
-          task={selectedTask}
-          onClose={() => setSelectedTask(null)}
-          onUpdated={handleTaskUpdated}
-          onDeleted={handleTaskDeleted}
-        />
-      )}
+  <TaskModal
+    task={selectedTask}
+    onClose={() => setSelectedTask(null)}
+    onUpdated={handleTaskUpdated}
+    onDeleted={handleTaskDeleted}
+    onSubtasksAdded={(newTasks) => {
+      setBoard((prev) => ({
+        ...prev,
+        columns: prev.columns.map((c) =>
+          c.id === selectedTask.columnId
+            ? { ...c, tasks: [...c.tasks, ...newTasks] }
+            : c
+        ),
+      }));
+    }}
+  />
+)}
 
       {showMembers && (
         <MembersPanel

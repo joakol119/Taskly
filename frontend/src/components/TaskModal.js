@@ -15,6 +15,12 @@ const LABEL_COLORS = [
   { color: '#64748b', name: 'Gray' },
 ];
 
+const PRIORITY_TONE = {
+  low: 'bg-success/10 border-success/30 text-success',
+  medium: 'bg-warning/10 border-warning/30 text-warning',
+  high: 'bg-danger/10 border-danger/30 text-danger',
+};
+
 function formatForInput(dateStr) {
   if (!dateStr) return '';
   const d = new Date(dateStr);
@@ -22,7 +28,7 @@ function formatForInput(dateStr) {
   return d.toISOString().slice(0, 16);
 }
 
-export default function TaskModal({ task, onClose, onUpdated, onDeleted }) {
+export default function TaskModal({ task, onClose, onUpdated, onDeleted, onSubtasksAdded }) {
   const toast = useToast();
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || '');
@@ -34,6 +40,12 @@ export default function TaskModal({ task, onClose, onUpdated, onDeleted }) {
   const [done, setDone] = useState(task.done || false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // AI breakdown state
+  const [breakdown, setBreakdown] = useState(null);
+  const [breakdownLoading, setBreakdownLoading] = useState(false);
+  const [breakdownError, setBreakdownError] = useState('');
+  const [addingSubtasks, setAddingSubtasks] = useState(false);
 
   useEffect(() => {
     const handleKey = (e) => {
@@ -95,6 +107,42 @@ export default function TaskModal({ task, onClose, onUpdated, onDeleted }) {
     }
   };
 
+  const handleBreakdown = async () => {
+    setBreakdownLoading(true);
+    setBreakdownError('');
+    setBreakdown(null);
+    try {
+      const result = await api.breakdownTask(task.id);
+      setBreakdown(result);
+    } catch (err) {
+      setBreakdownError(err.message || 'Failed to generate breakdown');
+    } finally {
+      setBreakdownLoading(false);
+    }
+  };
+
+  const handleAddSubtasks = async () => {
+    if (!breakdown || !onSubtasksAdded) return;
+    setAddingSubtasks(true);
+    try {
+      const created = [];
+      for (const subtaskTitle of breakdown.subtasks) {
+        const newTask = await api.createTask({
+          title: subtaskTitle,
+          columnId: task.columnId,
+        });
+        created.push(newTask);
+      }
+      onSubtasksAdded(created);
+      toast({ message: `Added ${created.length} subtasks` });
+      setBreakdown(null);
+    } catch (err) {
+      toast({ message: err.message || 'Failed to add subtasks', type: 'error' });
+    } finally {
+      setAddingSubtasks(false);
+    }
+  };
+
   const getDueDateStatus = () => {
     if (!dueDate) return null;
     const now = new Date();
@@ -151,11 +199,7 @@ export default function TaskModal({ task, onClose, onUpdated, onDeleted }) {
             >
               {done && (
                 <svg className="w-3 h-3 text-bg" viewBox="0 0 20 20" fill="currentColor">
-                  <path
-                    fillRule="evenodd"
-                    d="M16.704 5.29a1 1 0 010 1.42l-8 8a1 1 0 01-1.42 0l-4-4a1 1 0 111.42-1.42L8 12.59l7.29-7.3a1 1 0 011.414 0z"
-                    clipRule="evenodd"
-                  />
+                  <path fillRule="evenodd" d="M16.704 5.29a1 1 0 010 1.42l-8 8a1 1 0 01-1.42 0l-4-4a1 1 0 111.42-1.42L8 12.59l7.29-7.3a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
               )}
             </span>
@@ -194,6 +238,100 @@ export default function TaskModal({ task, onClose, onUpdated, onDeleted }) {
               rows={3}
               className="w-full px-3 py-2 text-sm bg-bg border border-border rounded-md text-text placeholder:text-text-subtle focus:outline-none focus:border-accent transition-colors resize-y min-h-[80px]"
             />
+          </div>
+
+          {/* AI Breakdown */}
+          <div className="space-y-2">
+            {!breakdown && !breakdownLoading && !breakdownError && (
+              <button
+                type="button"
+                onClick={handleBreakdown}
+                className="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium bg-accent-soft border border-accent/30 text-accent rounded-md hover:bg-accent/15 transition-colors"
+              >
+                <span>✦</span>
+                <span>Break down with AI</span>
+              </button>
+            )}
+
+            {breakdownLoading && (
+              <div className="flex items-center gap-3 px-3 py-2 rounded-md bg-bg border border-border">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+                <span className="text-sm text-text-muted">Thinking...</span>
+              </div>
+            )}
+
+            {breakdownError && (
+              <div className="space-y-2">
+                <div className="px-3 py-2 text-sm rounded-md bg-danger/10 border border-danger/30 text-danger">
+                  {breakdownError}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setBreakdownError('')}
+                  className="text-xs text-text-muted hover:text-text transition-colors"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
+
+            {breakdown && (
+              <div className="rounded-md bg-bg border border-border p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-accent text-sm">✦</span>
+                    <span className="text-xs font-mono uppercase tracking-wider text-text-muted">
+                      AI Breakdown
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setBreakdown(null)}
+                    className="w-5 h-5 flex items-center justify-center rounded text-text-subtle hover:text-text hover:bg-surface-2 transition-colors"
+                    aria-label="Dismiss"
+                  >
+                    <span className="text-sm leading-none">×</span>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="font-mono text-text-muted">
+                    ~{breakdown.estimatedHours}h
+                  </span>
+                  <span className="text-text-subtle">·</span>
+                  <span className={`inline-flex items-center px-1.5 py-0 font-mono uppercase tracking-wider rounded border ${PRIORITY_TONE[breakdown.priority] || PRIORITY_TONE.medium}`}>
+                    {breakdown.priority}
+                  </span>
+                </div>
+
+                <ul className="space-y-1.5">
+                  {breakdown.subtasks.map((sub, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-text">
+                      <span className="text-text-subtle font-mono mt-0.5">{i + 1}.</span>
+                      <span>{sub}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleAddSubtasks}
+                    disabled={addingSubtasks || !onSubtasksAdded}
+                    className="px-3 py-1.5 text-xs font-medium bg-accent text-white rounded-md hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {addingSubtasks ? 'Adding...' : 'Add as subtasks'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBreakdown(null)}
+                    className="px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text transition-colors"
+                  >
+                    Discard
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Due date */}

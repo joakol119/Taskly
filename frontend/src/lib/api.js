@@ -40,4 +40,5 @@ export const api = {
   updateTask: (id, data) => request(`/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   moveTask: (id, data) => request(`/tasks/${id}/move`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteTask: (id) => request(`/tasks/${id}`, { method: 'DELETE' }),
+  breakdownTask: (id) => request(`/tasks/${id}/breakdown`, { method: 'POST' }),
 };
