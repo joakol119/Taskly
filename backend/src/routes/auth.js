@@ -42,7 +42,13 @@ router.post('/login', async (req, res) => {
     const token = jwt.sign({ id: user.id, email: user.email, name: user.name }, process.env.JWT_SECRET, { expiresIn: '7d' });
     res.json({
       token,
-      user: { id: user.id, name: user.name, email: user.email, avatar_url: user.avatar_url || null }
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        avatar_url: user.avatar_url || null,
+        has_github_token: !!user.github_access_token,
+      }
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -53,24 +59,21 @@ router.post('/login', async (req, res) => {
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
-// Step 1: Redirect to GitHub authorization page
 router.get('/github', (req, res) => {
   if (!process.env.GITHUB_CLIENT_ID) {
     return res.status(500).send('GitHub OAuth is not configured on this server.');
   }
   const params = new URLSearchParams({
     client_id: process.env.GITHUB_CLIENT_ID,
-    scope: 'read:user user:email',
+    scope: 'read:user user:email public_repo',
     allow_signup: 'true',
   });
   res.redirect(`https://github.com/login/oauth/authorize?${params.toString()}`);
 });
 
-// Step 2: GitHub redirects back here with a code
 router.get('/github/callback', async (req, res) => {
   const { code, error: ghError } = req.query;
 
-  // User clicked "Cancel" on GitHub authorization
   if (ghError) {
     return res.redirect(`${FRONTEND_URL}/login?error=github_cancelled`);
   }
@@ -116,7 +119,7 @@ router.get('/github/callback', async (req, res) => {
       return res.redirect(`${FRONTEND_URL}/login?error=github_user_failed`);
     }
 
-    // Some GitHub users keep their primary email private; fetch /user/emails to get one
+    // Fetch primary email if not public
     let email = ghUser.email;
     if (!email) {
       const emailsRes = await fetch('https://api.github.com/user/emails', {
@@ -137,61 +140,58 @@ router.get('/github/callback', async (req, res) => {
       return res.redirect(`${FRONTEND_URL}/login?error=github_no_email`);
     }
 
-    // Find or create user
     const githubId = String(ghUser.id);
     let user;
 
-    // 1. Try to find by github_id (returning user)
+    // 1. Find by github_id (returning user)
     let existing = await db.query('SELECT * FROM users WHERE github_id = $1', [githubId]);
     if (existing.rows.length) {
       user = existing.rows[0];
-      // Refresh username/avatar in case they changed
       await db.query(
-        'UPDATE users SET github_username = $1, avatar_url = $2 WHERE id = $3',
-        [ghUser.login, ghUser.avatar_url, user.id]
+        'UPDATE users SET github_username = $1, avatar_url = $2, github_access_token = $3 WHERE id = $4',
+        [ghUser.login, ghUser.avatar_url, accessToken, user.id]
       );
       user.github_username = ghUser.login;
       user.avatar_url = ghUser.avatar_url;
+      user.github_access_token = accessToken;
     } else {
-      // 2. Try to find by email (merge flow: existing email/password user)
+      // 2. Find by email (merge flow)
       existing = await db.query('SELECT * FROM users WHERE email = $1', [email]);
       if (existing.rows.length) {
         user = existing.rows[0];
-        // Link this GitHub account to the existing user
         await db.query(
-          'UPDATE users SET github_id = $1, github_username = $2, avatar_url = $3 WHERE id = $4',
-          [githubId, ghUser.login, ghUser.avatar_url, user.id]
+          'UPDATE users SET github_id = $1, github_username = $2, avatar_url = $3, github_access_token = $4 WHERE id = $5',
+          [githubId, ghUser.login, ghUser.avatar_url, accessToken, user.id]
         );
         user.github_id = githubId;
         user.github_username = ghUser.login;
         user.avatar_url = ghUser.avatar_url;
+        user.github_access_token = accessToken;
       } else {
         // 3. Brand new user
         const created = await db.query(
-          `INSERT INTO users (name, email, github_id, github_username, avatar_url)
-           VALUES ($1, $2, $3, $4, $5)
+          `INSERT INTO users (name, email, github_id, github_username, avatar_url, github_access_token)
+           VALUES ($1, $2, $3, $4, $5, $6)
            RETURNING *`,
-          [ghUser.name || ghUser.login, email, githubId, ghUser.login, ghUser.avatar_url]
+          [ghUser.name || ghUser.login, email, githubId, ghUser.login, ghUser.avatar_url, accessToken]
         );
         user = created.rows[0];
       }
     }
 
-    // Issue our own JWT
     const token = jwt.sign(
       { id: user.id, email: user.email, name: user.name },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
 
-    // Build the URL with token + user info as query params
-    // The frontend's /auth/callback page will read these and store them in localStorage
     const userPayload = encodeURIComponent(JSON.stringify({
       id: user.id,
       name: user.name,
       email: user.email,
       avatar_url: user.avatar_url || null,
       github_username: user.github_username || null,
+      has_github_token: !!user.github_access_token,
     }));
 
     res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}&user=${userPayload}`);

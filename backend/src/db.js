@@ -63,6 +63,7 @@ async function init() {
   await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS github_id TEXT UNIQUE`);
   await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS github_username TEXT`);
   await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT`);
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS github_access_token TEXT`);
   // Password is now nullable: GitHub-only users have no password
   await query(`ALTER TABLE users ALTER COLUMN password DROP NOT NULL`);
 
