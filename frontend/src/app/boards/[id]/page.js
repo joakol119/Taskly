@@ -1,5 +1,5 @@
 'use client';
-
+import GitHubImportModal from '../../../components/GitHubImportModal';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { api } from '../../../lib/api';
@@ -36,6 +36,7 @@ export default function BoardPage() {
   const [newTaskInputs, setNewTaskInputs] = useState({});
   const [selectedTask, setSelectedTask] = useState(null);
   const [showMembers, setShowMembers] = useState(false);
+  const [showGithubImport, setShowGithubImport] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [editingColId, setEditingColId] = useState(null);
   const [editingColName, setEditingColName] = useState('');
@@ -156,6 +157,15 @@ export default function BoardPage() {
         tasks: c.tasks.filter((t) => t.id !== taskId),
       })),
     });
+  };
+
+  const handleTasksImported = (columnId, newTasks) => {
+  setBoard((prev) => ({
+    ...prev,
+    columns: prev.columns.map((c) =>
+      c.id === columnId ? { ...c, tasks: [...c.tasks, ...newTasks] } : c
+    ),
+  }));
   };
 
   const handleToggleDone = async (e, task) => {
@@ -319,7 +329,12 @@ export default function BoardPage() {
               {board.name}
             </h1>
           )}
-
+          <button
+            onClick={() => setShowGithubImport(true)}
+            className="px-3 py-1.5 text-sm text-text-muted hover:text-text bg-surface border border-border hover:border-border-strong rounded-md transition-colors"
+          >
+            Import from GitHub
+          </button>
           <button
             onClick={() => setShowMembers(true)}
             className="px-3 py-1.5 text-sm text-text-muted hover:text-text bg-surface border border-border hover:border-border-strong rounded-md transition-colors"
@@ -547,6 +562,13 @@ export default function BoardPage() {
           onMembersUpdated={fetchBoard}
         />
       )}
+      {showGithubImport && (
+  <GitHubImportModal
+        board={board}
+        onClose={() => setShowGithubImport(false)}
+        onTasksImported={handleTasksImported}
+      />
+    )}
     </div>
   );
 }
