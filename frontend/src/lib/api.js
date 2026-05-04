@@ -41,4 +41,8 @@ export const api = {
   moveTask: (id, data) => request(`/tasks/${id}/move`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteTask: (id) => request(`/tasks/${id}`, { method: 'DELETE' }),
   breakdownTask: (id) => request(`/tasks/${id}/breakdown`, { method: 'POST' }),
+  getGithubIssues: (owner, repo) =>
+    request(`/github/issues?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}`),
+  importGithubIssues: (columnId, issues) =>
+    request('/github/import', { method: 'POST', body: JSON.stringify({ columnId, issues }) }),
 };
