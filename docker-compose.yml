@@ -1,5 +1,4 @@
 version: '3.8'
-
 services:
   db:
     image: postgres:15
@@ -13,7 +12,6 @@ services:
     volumes:
       - taskly-db:/var/lib/postgresql/data
     restart: unless-stopped
-
   backend:
     build: ./backend
     container_name: taskly-backend
@@ -23,10 +21,12 @@ services:
       - PORT=4000
       - DATABASE_URL=postgresql://taskly:taskly123@db:5432/taskly
       - JWT_SECRET=supersecretkey123
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      - FRONTEND_URL=http://localhost:3000
     depends_on:
       - db
     restart: unless-stopped
-
   frontend:
     build:
       context: ./frontend
@@ -40,6 +40,5 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
-
 volumes:
   taskly-db:
