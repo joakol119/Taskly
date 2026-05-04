@@ -1,5 +1,4 @@
 const { Pool } = require('pg');
-
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 async function query(text, params) {
@@ -8,6 +7,7 @@ async function query(text, params) {
 }
 
 async function init() {
+  // Tables
   await query(`
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
@@ -51,10 +51,21 @@ async function init() {
       column_id INTEGER REFERENCES columns(id) ON DELETE CASCADE
     )
   `);
+
+  // Migrations (idempotent)
   await query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS labels TEXT DEFAULT '[]'`);
   await query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS due_date TIMESTAMP`);
+  await query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS done BOOLEAN DEFAULT FALSE`);
   await query(`ALTER TABLE boards ADD COLUMN IF NOT EXISTS position INTEGER DEFAULT 0`);
   await query(`ALTER TABLE boards ADD COLUMN IF NOT EXISTS color TEXT`);
+
+  // GitHub OAuth columns
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS github_id TEXT UNIQUE`);
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS github_username TEXT`);
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT`);
+  // Password is now nullable: GitHub-only users have no password
+  await query(`ALTER TABLE users ALTER COLUMN password DROP NOT NULL`);
+
   console.log('Database initialized');
 }
 
